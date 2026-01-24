@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::AppState;
+use crate::world_view::WorldView;
 use ravel_ecs::iching::{get_hexagram_by_gate, RAVE_MANDALA};
 
 pub struct VisualizerPlugin;
@@ -23,9 +24,27 @@ impl Plugin for VisualizerPlugin {
            .add_systems(Update, (
                select_entity.run_if(in_state(AppState::Simulation)),
                update_visualizer_ui.run_if(in_state(AppState::Simulation)),
-               handle_tooltip.run_if(in_state(AppState::Simulation)),
+               handle_tooltip.run_if(in_state(AppState::Simulation).and_then(any_with_component::<VisualizerUi>)),
+               manage_visualizer_visibility.run_if(in_state(AppState::Simulation)),
            ))
            .add_systems(OnExit(AppState::Simulation), cleanup_visualizer);
+    }
+}
+
+fn manage_visualizer_visibility(
+    world_view: Res<State<WorldView>>,
+    mut query: Query<&mut Visibility, With<VisualizerUi>>,
+) {
+    let should_be_visible = match *world_view.get() {
+        WorldView::Standard | WorldView::MandalaOnly => true, // Assuming analysis is part of these
+        _ => false,
+    };
+
+    let new_vis = if should_be_visible { Visibility::Visible } else { Visibility::Hidden };
+    for mut vis in query.iter_mut() {
+        if *vis != new_vis {
+            *vis = new_vis;
+        }
     }
 }
 
@@ -158,10 +177,10 @@ fn update_visualizer_ui(
                 let val = entity_data.chord[binary_idx];
                 
                 let symbol_color = if val > 0 {
-                    let intensity = (val as f32 / 100.0).clamp(0.0, 1.0);
+                    let intensity = (val as f32 / i32::MAX as f32).clamp(0.0, 1.0);
                     Color::srgb(1.0 - intensity, 1.0, 1.0 - intensity) // Greenish
                 } else if val < 0 {
-                    let intensity = (val.abs() as f32 / 100.0).clamp(0.0, 1.0);
+                    let intensity = (val.abs() as f32 / i32::MAX as f32).clamp(0.0, 1.0);
                     Color::srgb(1.0, 1.0 - intensity, 1.0 - intensity) // Reddish
                 } else {
                     Color::srgb(0.5, 0.5, 0.5) // Neutral Grey

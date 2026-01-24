@@ -10,12 +10,14 @@ mod view;
 mod map_view;
 mod map_resources;
 mod visualizer;
+mod world_view;
 
 use resources::SimulationState;
 use experiments::{ExperimentsPlugin, ExperimentState, EXPERIMENTS};
 use view::MandalaViewPlugin;
 use map_view::MapViewPlugin;
 use visualizer::VisualizerPlugin;
+use world_view::{WorldViewPlugin, WorldView};
 
 // --- STATES ---
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -48,6 +50,7 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.05)))
         .init_resource::<map_resources::LandMask>()
         .init_state::<AppState>()
+        .add_plugins(WorldViewPlugin)
         .add_plugins(ExperimentsPlugin)
         .add_plugins(MandalaViewPlugin)
         .add_plugins(MapViewPlugin)
@@ -61,6 +64,7 @@ fn main() {
             quit_simulation,
             return_to_menu,
             toggle_keymap_ui,
+            switch_world_view,
         ))
         
         .add_systems(OnEnter(AppState::Menu), setup_menu)
@@ -221,11 +225,30 @@ fn return_to_menu(
     app_state: Res<State<AppState>>,
     mut next_app_state: ResMut<NextState<AppState>>,
     mut next_exp_state: ResMut<NextState<ExperimentState>>,
+    mut next_world_view: ResMut<NextState<WorldView>>,
 ) {
     if keys.just_pressed(KeyCode::Escape) && *app_state.get() == AppState::Simulation {
         next_app_state.set(AppState::Menu);
         next_exp_state.set(ExperimentState::None);
+        next_world_view.set(WorldView::None);
     } 
+}
+
+fn switch_world_view(
+    keys: Res<ButtonInput<KeyCode>>,
+    _current_view: Res<State<WorldView>>,
+    mut next_view: ResMut<NextState<WorldView>>,
+    app_state: Res<State<AppState>>,
+) {
+    if *app_state.get() != AppState::Simulation { return; }
+
+    if keys.just_pressed(KeyCode::Digit1) {
+        next_view.set(WorldView::Standard);
+    } else if keys.just_pressed(KeyCode::Digit2) {
+        next_view.set(WorldView::MapOnly);
+    } else if keys.just_pressed(KeyCode::Digit3) {
+        next_view.set(WorldView::MandalaOnly);
+    }
 }
 
 fn quit_simulation(

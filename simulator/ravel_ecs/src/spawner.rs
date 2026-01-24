@@ -11,7 +11,7 @@ pub enum RavelType {
 pub struct Spawner;
 
 impl Spawner {
-    pub fn spawn(ravel_type: RavelType, global_chord: Option<&[i32; 64]>) -> Ravel {
+    pub fn spawn(ravel_type: RavelType, global_chord: Option<&[i128; 64]>) -> Ravel {
         match ravel_type {
             RavelType::Plant => Self::spawn_plant(),
             RavelType::Balancer => {
@@ -30,7 +30,7 @@ impl Spawner {
 
         for i in 0..64 {
             if rng.gen_bool(0.5) {
-                chord[i] = rng.gen_range(-100..100);
+                chord[i] = rng.r#gen::<i32>();
             }
         }
         
@@ -50,7 +50,7 @@ impl Spawner {
         )
     }
 
-    pub fn spawn_balancer(global_chord: &[i32; 64]) -> Ravel {
+    pub fn spawn_balancer(global_chord: &[i128; 64]) -> Ravel {
         let mut rng = rand::thread_rng();
         let mut chord = [0; 64];
 
@@ -58,11 +58,11 @@ impl Spawner {
             let current_val = global_chord[i];
             if rng.gen_bool(0.5) {
                 if current_val > 0 {
-                    chord[i] = rng.gen_range(-100..0);
+                    chord[i] = rng.gen_range(i32::MIN..0);
                 } else if current_val < 0 {
-                    chord[i] = rng.gen_range(0..100);
+                    chord[i] = rng.gen_range(0..i32::MAX);
                 } else {
-                    chord[i] = rng.gen_range(-100..100);
+                    chord[i] = rng.r#gen::<i32>();
                 }
             }
         }

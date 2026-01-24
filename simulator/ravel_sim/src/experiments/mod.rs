@@ -14,6 +14,8 @@ pub mod show_a_map;
 pub mod population_map;
 #[path = "07_chords/mod.rs"]
 pub mod chords;
+#[path = "08_view_changer/mod.rs"]
+pub mod view_changer;
 
 use genesis::GenesisPlugin;
 use entropy::EntropyPlugin;
@@ -22,6 +24,7 @@ use civilization::CivilizationPlugin;
 use show_a_map::ShowAMapExperiment;
 use population_map::PopulationMapPlugin;
 use chords::ChordsPlugin;
+use view_changer::ViewChangerPlugin;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum ExperimentState {
@@ -34,6 +37,7 @@ pub enum ExperimentState {
     ShowAMap,
     PopulationMap,
     Chords,
+    ViewChanger,
 }
 
 pub struct Experiment {
@@ -94,6 +98,13 @@ pub const EXPERIMENTS: &[Experiment] = &[
         state: ExperimentState::Chords,
         active: true,
     },
+    Experiment {
+        id: 8,
+        name: "View Changer",
+        description: "Switch between World and Player views.",
+        state: ExperimentState::ViewChanger,
+        active: true,
+    },
 ];
 
 pub struct ExperimentsPlugin;
@@ -109,6 +120,7 @@ impl Plugin for ExperimentsPlugin {
                 ShowAMapExperiment,
                 PopulationMapPlugin,
                 ChordsPlugin,
+                ViewChangerPlugin,
             ));
     }
 }

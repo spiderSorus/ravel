@@ -2,6 +2,7 @@
 use bevy::prelude::*;
 use crate::AppState;
 use crate::resources::SimulationState;
+use crate::world_view::WorldView;
 
 pub struct MapViewPlugin;
 
@@ -19,7 +20,8 @@ impl Plugin for MapViewPlugin {
            .add_systems(OnExit(AppState::Simulation), cleanup_map)
            .add_systems(Update, (
                toggle_map_view.run_if(in_state(AppState::Simulation)),
-               draw_entities_on_map.run_if(in_state(AppState::Simulation)),
+               draw_entities_on_map.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MapView>)),
+               manage_map_visibility.run_if(in_state(AppState::Simulation)),
            ));
     }
 }
@@ -59,14 +61,25 @@ fn cleanup_map(mut commands: Commands, query: Query<Entity, With<MapView>>) {
 fn toggle_map_view(
     keys: Res<ButtonInput<KeyCode>>,
     mut visibility_res: ResMut<MapViewVisibility>,
-    mut query: Query<&mut Visibility, With<MapView>>,
 ) {
     if keys.just_pressed(KeyCode::KeyE) {
         visibility_res.0 = !visibility_res.0;
-        
-        let new_vis = if visibility_res.0 { Visibility::Visible } else { Visibility::Hidden };
-        
-        for mut vis in query.iter_mut() {
+    }
+}
+
+fn manage_map_visibility(
+    world_view: Res<State<WorldView>>,
+    visibility_res: Res<MapViewVisibility>,
+    mut query: Query<&mut Visibility, With<MapView>>,
+) {
+    let should_be_visible = match *world_view.get() {
+        WorldView::Standard | WorldView::MapOnly => visibility_res.0,
+        _ => false,
+    };
+
+    let new_vis = if should_be_visible { Visibility::Visible } else { Visibility::Hidden };
+    for mut vis in query.iter_mut() {
+        if *vis != new_vis {
             *vis = new_vis;
         }
     }

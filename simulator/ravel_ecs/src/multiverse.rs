@@ -3,7 +3,7 @@ use crate::ravel::Ravel;
 // --- 4. THE MULTIVERSE (The Sensor) ---
 pub struct Multiverse {
     pub entities: Vec<Ravel>,
-    pub global_chord: [i32; 64],
+    pub global_chord: [i128; 64],
 }
 
 impl Multiverse {
@@ -19,10 +19,10 @@ impl Multiverse {
     }
 
     pub fn sample_graph(&mut self) {
-        let mut aggregate = [0; 64];
+        let mut aggregate = [0i128; 64];
         for entity in &self.entities {
             for i in 0..64 {
-                aggregate[i] += entity.chord[i];
+                aggregate[i] += entity.chord[i] as i128;
             }
         }
         self.global_chord = aggregate;

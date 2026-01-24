@@ -4,7 +4,8 @@ use bevy::render::render_asset::RenderAssetUsages;
 use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
 use ravel_ecs::iching::{gate_to_binary, get_hexagram_by_gate, RAVE_MANDALA};
 use crate::resources::SimulationState;
-use crate::AppState; // We need to know which state to attach to? Or pass it?
+use crate::AppState;
+use crate::world_view::WorldView;
 
 // To make it reusable, we might define the state generic, but for now we'll import AppState
 // or just export the systems and let main.rs schedule them.
@@ -26,11 +27,12 @@ impl Plugin for MandalaViewPlugin {
         app.add_systems(OnEnter(AppState::Simulation), setup_mandala)
            .add_systems(OnExit(AppState::Simulation), cleanup_mandala)
            .add_systems(Update, (
-               draw_mandala_grid.run_if(in_state(AppState::Simulation)),
-               update_sector_colors.run_if(in_state(AppState::Simulation)),
+               draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
+               update_sector_colors.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
                update_population_stats, 
                toggle_population_ui,
                toggle_mandala_view,
+               manage_mandala_visibility.run_if(in_state(AppState::Simulation)),
            ));
     }
 }
@@ -118,8 +120,13 @@ pub fn cleanup_mandala(
     }
 }
 
-fn draw_mandala_grid(mut gizmos: Gizmos, visibility: Res<MandalaVisibility>) {
-    if !visibility.0 { return; }
+fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>) {
+    let should_draw = match *world_view.get() {
+        WorldView::Standard | WorldView::MandalaOnly => true,
+        _ => false,
+    };
+
+    if !should_draw { return; }
 
     let center = Vec2::ZERO;
     let radius = 300.0;
@@ -139,20 +146,25 @@ fn update_sector_colors(
     query: Query<(&SectorIndex, &Handle<ColorMaterial>)>,
 ) {
     let chord = &sim.universe.global_chord;
-    let max_val = chord.iter().map(|v| v.abs()).max().unwrap_or(1) as f32;
+    let max_val = chord.iter().map(|v| v.abs()).max().unwrap_or(1) as f64;
     let max_val = max_val.max(10.0); 
 
     for (sector, mat_handle) in query.iter() {
         let gate = RAVE_MANDALA[sector.0];
         let binary_idx = gate_to_binary(gate) as usize;
-        let val = chord[binary_idx] as f32; 
+        let val = chord[binary_idx] as f64; 
 
         let color = if val.abs() < 0.001 {
             Color::BLACK
         } else {
             let norm = (val / max_val).clamp(-1.0, 1.0);
-            let t = (norm + 1.0) * 0.5;
-            Color::srgb(t, t, t)
+            if norm > 0.0 {
+                let t = norm as f32;
+                Color::srgb(0.0, t, 0.0) // Green intensity
+            } else {
+                let t = norm.abs() as f32;
+                Color::srgb(t, 0.0, 0.0) // Red intensity
+            }
         };
 
         if let Some(mat) = materials.get_mut(mat_handle) {
@@ -170,7 +182,7 @@ fn update_sector_colors(
 // If we move it here, we can attach it to `Startup` in the Plugin.
 
 pub fn setup_population_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let font = asset_server.load("FiraSans-Bold.ttf");
+    let font = asset_server.load("AppleSymbols.ttf"); // Changed to support hexagrams
     commands.spawn((
         TextBundle::from_section(
             "Population Stats",
@@ -195,6 +207,7 @@ fn update_population_stats(
     sim: Res<SimulationState>,
     mut query: Query<(&mut Text, &mut Style, &Visibility), With<PopulationUi>>,
     app_state: Res<State<AppState>>,
+    world_view: Res<State<WorldView>>,
     mut timer: Local<Timer>,
     time: Res<Time>,
 ) {
@@ -208,10 +221,46 @@ fn update_population_stats(
             style.display = Display::None;
             continue;
         }
+
+        let should_show = match *world_view.get() {
+            WorldView::Standard | WorldView::MandalaOnly => true,
+            _ => false,
+        };
+
+        if !should_show {
+            style.display = Display::None;
+            continue;
+        }
         
         if style.display != Display::None && timer.finished() {
             let total = sim.universe.entities.len();
-            let output = format!("Total Population: {}\n", total);
+            let mut output = format!("Total Population: {}\n", total);
+            output.push_str("Cumulative Affinity Scores:\n");
+
+            let chord = &sim.universe.global_chord;
+            
+            // 4 columns of 16 rows
+            let rows = 16;
+            for r in 0..rows {
+                for col in 0..4 {
+                    let gate_idx = r + (col * 16); // 0-63
+                    let gate = (gate_idx + 1) as u8; // Sequential gates 1-64
+                    let binary_idx = gate_to_binary(gate) as usize;
+                    let val = chord[binary_idx];
+                    let symbol = get_hexagram_by_gate(gate).character;
+
+                    // Scientific notation for very large numbers or truncated
+                    let val_str = if val.abs() > 1_000_000_000 {
+                        format!("{:.1e}", val as f64)
+                    } else {
+                        format!("{}", val)
+                    };
+
+                    output.push_str(&format!("{} {:>2}: {:<10} ", symbol, gate, val_str));
+                }
+                output.push('\n');
+            }
+
             text.sections[0].value = output;
         }
     }
@@ -238,19 +287,26 @@ fn toggle_population_ui(
 fn toggle_mandala_view(
     keys: Res<ButtonInput<KeyCode>>,
     mut visibility_res: ResMut<MandalaVisibility>,
-    mut query: Query<&mut Visibility, With<MandalaElement>>,
-    _app_state: Res<State<AppState>>,
 ) {
-    // User wants toggle in "every scene" -> but Mandala only exists in Simulation?
-    // If we toggle it in Menu, it won't show anyway (no entities).
-    // So we just check input.
-    
     if keys.just_pressed(KeyCode::KeyT) {
         visibility_res.0 = !visibility_res.0;
-        
-        let new_vis = if visibility_res.0 { Visibility::Visible } else { Visibility::Hidden };
-        
-        for mut vis in query.iter_mut() {
+    }
+}
+
+fn manage_mandala_visibility(
+    world_view: Res<State<WorldView>>,
+    visibility_res: Res<MandalaVisibility>,
+    mut query: Query<&mut Visibility, With<MandalaElement>>,
+) {
+let should_be_visible = match *world_view.get() {
+    WorldView::Standard | WorldView::MandalaOnly => visibility_res.0,
+    WorldView::Player => false,
+    _ => false,
+};
+
+    let new_vis = if should_be_visible { Visibility::Visible } else { Visibility::Hidden };
+    for mut vis in query.iter_mut() {
+        if *vis != new_vis {
             *vis = new_vis;
         }
     }
