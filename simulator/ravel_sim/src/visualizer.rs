@@ -137,14 +137,16 @@ fn update_visualizer_ui(
                 let available = (i as u8) < entity_data.resolution;
                 
                 let val_bool = if available { entity_data.chord[i] > 0 } else { false };
-                let color = if available { Color::WHITE } else { Color::srgb(0.3, 0.3, 0.3) };
-                let val_color = if available { 
-                    if val_bool { Color::srgb(0.0, 1.0, 0.0) } else { Color::srgb(1.0, 0.0, 0.0) } 
-                } else { 
-                    Color::srgb(0.3, 0.3, 0.3) 
-                };
                 
-                let val_str = if available { if val_bool { "1" } else { "0" } } else { "0" };
+                let symbol_color = if available {
+                    if val_bool {
+                        Color::srgb(0.0, 1.0, 0.0) // Green
+                    } else {
+                        Color::srgb(1.0, 0.0, 0.0) // Red
+                    }
+                } else {
+                    Color::srgb(0.3, 0.3, 0.3) // Grey
+                };
 
                 grid.spawn(NodeBundle {
                     style: Style {
@@ -156,11 +158,7 @@ fn update_visualizer_ui(
                 }).with_children(|cell| {
                     cell.spawn(TextBundle::from_section(
                         hex.character.to_string(),
-                        TextStyle { font: symbol_font.clone(), font_size: 40.0, color }
-                    ));
-                    cell.spawn(TextBundle::from_section(
-                        val_str,
-                        TextStyle { font: font.clone(), font_size: 32.0, color: val_color }
+                        TextStyle { font: symbol_font.clone(), font_size: 40.0, color: symbol_color }
                     ));
                 });
             }

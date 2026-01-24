@@ -88,6 +88,8 @@ fn draw_entities_on_map(
 
         let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * width - width / 2.0;
         let screen_y = (y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * height - height / 2.0;
-        gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::srgb(1.0, 0.0, 0.0));
+
+        let hue = (entity.resolution as f32 / 64.0) * 270.0;
+        gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::hsl(hue, 1.0, 0.5));
     }
 }
