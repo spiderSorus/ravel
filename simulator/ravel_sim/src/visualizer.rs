@@ -252,8 +252,11 @@ fn handle_tooltip(
     }
 }
 
-fn cleanup_visualizer(mut commands: Commands, query: Query<Entity, With<VisualizerUi>>) {
-    for entity in query.iter() {
+fn cleanup_visualizer(mut commands: Commands, ui_query: Query<Entity, With<VisualizerUi>>, tooltip_query: Query<Entity, With<TooltipUi>>) {
+    for entity in ui_query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    for entity in tooltip_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
 }
