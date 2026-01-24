@@ -26,7 +26,7 @@ impl Plugin for VisualizerPlugin {
                handle_tooltip.run_if(in_state(AppState::Simulation).and_then(any_with_component::<VisualizerUi>)),
                manage_visualizer_visibility.run_if(in_state(AppState::Simulation)),
            ))
-           .add_systems(OnExit(AppState::Simulation), cleanup_visualizer);
+           .add_systems(OnExit(AppState::Simulation), (cleanup_visualizer, reset_selected_entity));
     }
 }
 
@@ -259,4 +259,8 @@ fn cleanup_visualizer(mut commands: Commands, ui_query: Query<Entity, With<Visua
     for entity in tooltip_query.iter() {
         commands.entity(entity).despawn_recursive();
     }
+}
+
+fn reset_selected_entity(mut selected: ResMut<SelectedEntity>) {
+    selected.0 = None;
 }
