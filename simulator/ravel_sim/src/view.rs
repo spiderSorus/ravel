@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
-use ravel_ecs::iching::{gate_to_binary, RAVE_MANDALA};
+use ravel_ecs::iching::{gate_to_binary, get_hexagram_by_gate, RAVE_MANDALA};
 use crate::resources::SimulationState;
 use crate::AppState; // We need to know which state to attach to? Or pass it?
 
@@ -204,24 +204,11 @@ fn update_population_stats(
     timer.tick(time.delta());
 
     for (mut text, mut style, _vis) in query.iter_mut() {
-        // Logic: Visible only in Simulation AND if toggled on?
-        // Let's use `Style.display` for toggling.
-        // But we also want to hide it in Menu.
         if *app_state.get() == AppState::Menu {
-            // Force hide
             style.display = Display::None;
             continue;
         }
         
-        // In Simulation: Visibility is controlled by user (P key).
-        // So we don't force it here, unless we want a default.
-        // We'll let `toggle_population_ui` handle the user preference.
-        // But wait, `toggle` modifies `Style`?
-        // If we force `Display::None` in Menu, we must restore it in Simulation?
-        // Maybe we need a Resource to track "User Wants UI"?
-        // Or just check if style is None, do nothing?
-        
-        // If style is Flex, we update text.
         if style.display != Display::None && timer.finished() {
             let mut counts = [0usize; 65];
             let mut total = 0;
@@ -235,10 +222,27 @@ fn update_population_stats(
             }
 
             let mut output = format!("Total Population: {}\n", total);
-            for i in 1..=64 {
-                if counts[i] > 0 {
-                    output.push_str(&format!("Res {}: {}\n", i, counts[i]));
-                }
+            
+            // Fixed 4-column layout for consistent display
+            let rows = 16;
+            for r in 0..rows {
+                let r1 = r + 1;
+                let r2 = r + 1 + 16;
+                let r3 = r + 1 + 32;
+                let r4 = r + 1 + 48;
+                
+                let c1 = get_hexagram_by_gate(r1 as u8).character;
+                let c2 = get_hexagram_by_gate(r2 as u8).character;
+                let c3 = get_hexagram_by_gate(r3 as u8).character;
+                let c4 = get_hexagram_by_gate(r4 as u8).character;
+
+                output.push_str(&format!(
+                    "{} {:>2}: {:<5}  {} {:>2}: {:<5}  {} {:>2}: {:<5}  {} {:>2}: {:<5}\n",
+                    c1, r1, counts[r1],
+                    c2, r2, counts[r2],
+                    c3, r3, counts[r3],
+                    c4, r4, counts[r4]
+                ));
             }
             text.sections[0].value = output;
         }

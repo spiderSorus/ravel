@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{RavelObject, Taijitu, Locomotion, Spawner};
+use ravel_ecs::{Ravel, Locomotion, Spawner};
 use rand::Rng;
 
 pub struct CivilizationPlugin;
@@ -71,7 +71,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
     }
 }
 
-fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> RavelObject {
+fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> Ravel {
     let mut rng = rand::thread_rng();
     let mut chord = [0; 64];
 
@@ -95,8 +95,8 @@ fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> RavelObject {
         }
     }
 
-    RavelObject::new(
-        Taijitu::Object,
+    Ravel::new(
+        true, // Taijitu::Object
         Locomotion::Active,
         resolution,
         ravel_ecs::Pos { x: 0.0, y: 0.0 },
