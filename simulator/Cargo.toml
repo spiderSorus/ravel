@@ -1,6 +1,11 @@
 [package]
-name = "simulator"
+name = "ravel_sim"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "RavelSim"
+path = "src/main.rs"
+
 [dependencies]
+hecs = "0.11.0"
