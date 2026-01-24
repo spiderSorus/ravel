@@ -25,8 +25,7 @@ impl Plugin for MandalaViewPlugin {
         // Simulation Phase
         app.add_systems(OnEnter(AppState::Simulation), setup_mandala)
            .add_systems(OnExit(AppState::Simulation), cleanup_mandala)
-           .add_systems(Update, (
-               draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
+           .add_systems(Update, (               update_global_chord.run_if(in_state(AppState::Simulation)),               draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
                update_sector_colors.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
                update_population_stats, 
                toggle_population_ui,
@@ -139,6 +138,20 @@ fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>) {
     gizmos.circle_2d(center, radius, color);
 }
 
+fn update_global_chord(
+    mut multiverse_state: ResMut<ravel_ecs::MultiverseState>,
+    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
+) {
+    // Calculate aggregate chord from all ravels in the multiverse
+    let mut chord = [0i128; 64];
+    for ravel in ravels.iter() {
+        for (i, val) in ravel.chord.iter().enumerate() {
+            chord[i] = chord[i].saturating_add(*val as i128);
+        }
+    }
+    multiverse_state.global_chord = chord;
+}
+
 fn update_sector_colors(
     multiverse_state: Res<ravel_ecs::MultiverseState>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -154,15 +167,15 @@ fn update_sector_colors(
         let val = chord[binary_idx] as f64; 
 
         let color = if val.abs() < 0.001 {
-            Color::BLACK
+            Color::srgb(0.5, 0.5, 0.5) // Neutral grey
         } else {
             let norm = (val / max_val).clamp(-1.0, 1.0);
             if norm > 0.0 {
                 let t = norm as f32;
-                Color::srgb(0.0, t, 0.0) // Green intensity
+                Color::srgb(0.0, 0.5 + t * 0.5, 0.0) // Green intensity
             } else {
                 let t = norm.abs() as f32;
-                Color::srgb(t, 0.0, 0.0) // Red intensity
+                Color::srgb(0.5 + t * 0.5, 0.0, 0.0) // Red intensity
             }
         };
 
