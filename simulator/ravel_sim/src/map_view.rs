@@ -72,12 +72,6 @@ fn toggle_map_view(
     }
 }
 
-fn mercator_projection(lon: f32, lat: f32) -> (f32, f32) {
-    let x = lon.to_radians();
-    let y = (lat.to_radians().sin()).atanh();
-    (x, y)
-}
-
 fn draw_entities_on_map(
     mut gizmos: Gizmos,
     sim: Res<SimulationState>,
@@ -90,11 +84,10 @@ fn draw_entities_on_map(
     let (width, height) = (window.width(), window.height());
 
     for entity in &sim.universe.entities {
-        let (lon, lat) = (entity.pos.x, entity.pos.y);
-        let (x, y) = mercator_projection(lon, lat);
+        let (x, y) = entity.pos.to_mercator();
 
         let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * width - width / 2.0;
         let screen_y = (y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * height - height / 2.0;
-        gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::RED);
+        gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::srgb(1.0, 0.0, 0.0));
     }
 }

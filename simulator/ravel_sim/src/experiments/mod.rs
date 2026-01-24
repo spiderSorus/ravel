@@ -10,12 +10,15 @@ pub mod equilibrium;
 pub mod civilization;
 #[path = "05_show_a_map/mod.rs"]
 pub mod show_a_map;
+#[path = "06_population_map/mod.rs"]
+pub mod population_map;
 
 use genesis::GenesisPlugin;
 use entropy::EntropyPlugin;
 use equilibrium::EquilibriumPlugin;
 use civilization::CivilizationPlugin;
 use show_a_map::ShowAMapExperiment;
+use population_map::PopulationMapPlugin;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum ExperimentState {
@@ -26,6 +29,7 @@ pub enum ExperimentState {
     Equilibrium,
     Civilization,
     ShowAMap,
+    PopulationMap,
 }
 
 pub struct Experiment {
@@ -66,6 +70,12 @@ pub const EXPERIMENTS: &[Experiment] = &[
         description: "Shows a map.",
         state: ExperimentState::ShowAMap,
     },
+    Experiment {
+        id: 6,
+        name: "Population Map",
+        description: "Spawns a population on the world map.",
+        state: ExperimentState::PopulationMap,
+    },
 ];
 
 pub struct ExperimentsPlugin;
@@ -79,6 +89,7 @@ impl Plugin for ExperimentsPlugin {
                 EquilibriumPlugin,
                 CivilizationPlugin,
                 ShowAMapExperiment,
+                PopulationMapPlugin,
             ));
     }
 }

@@ -7,10 +7,15 @@ use ravel_ecs::Multiverse;
 mod resources;
 mod experiments;
 mod view;
+mod map_view;
+mod map_resources;
+mod visualizer;
 
 use resources::SimulationState;
 use experiments::{ExperimentsPlugin, ExperimentState, EXPERIMENTS};
 use view::MandalaViewPlugin;
+use map_view::MapViewPlugin;
+use visualizer::VisualizerPlugin;
 
 // --- STATES ---
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -41,12 +46,16 @@ fn main() {
             ..default()
         }))
         .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.05)))
+        .init_resource::<map_resources::LandMask>()
         .init_state::<AppState>()
         .add_plugins(ExperimentsPlugin)
         .add_plugins(MandalaViewPlugin)
+        .add_plugins(MapViewPlugin)
+        .add_plugins(VisualizerPlugin)
         .add_plugins(bevy_svg::prelude::SvgPlugin)
         
-        .add_systems(Startup, (setup_app, setup_keymap_ui))
+        .add_systems(Startup, (setup_app, setup_keymap_ui, setup_map_resource))
+        .add_systems(Update, map_resources::generate_land_mask_system.run_if(resource_exists::<map_resources::MapImageHandle>))
         .add_systems(OnExit(AppState::Simulation), cleanup_simulation)
         .add_systems(Update, (
             quit_simulation,
@@ -75,6 +84,11 @@ fn setup_app(
         current_resolution: 1,
         step_counter: 0,
     });
+}
+
+fn setup_map_resource(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let handle = asset_server.load("map.png");
+    commands.insert_resource(map_resources::MapImageHandle(handle));
 }
 
 fn cleanup_simulation(mut sim: ResMut<SimulationState>) {

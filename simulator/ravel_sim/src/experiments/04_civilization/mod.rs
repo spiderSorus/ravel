@@ -96,9 +96,10 @@ fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> RavelObject {
     }
 
     RavelObject::new(
-        Taijitu::Object, 
-        Locomotion::Active, // Civilization implies Active?
-        resolution, 
+        Taijitu::Object,
+        Locomotion::Active,
+        resolution,
+        ravel_ecs::Pos { x: 0.0, y: 0.0 },
         chord
     )
 }

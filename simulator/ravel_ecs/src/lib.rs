@@ -16,17 +16,37 @@ pub enum Locomotion {
 }
 
 // --- 3. THE ATOM (RavelObject) ---
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Pos {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl Pos {
+    pub fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+
+    /// Convert longitude/latitude to Mercator projection coordinates (normalized -PI..PI)
+    pub fn to_mercator(&self) -> (f32, f32) {
+        let x = self.x.to_radians();
+        let y = (self.y.to_radians().sin()).atanh();
+        (x, y)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct RavelObject {
     pub base: Taijitu,
     pub locomotion: Locomotion,
-    pub resolution: u8, 
+    pub resolution: u8,
+    pub pos: Pos,
     pub chord: [i32; 64],
 }
 
 impl RavelObject {
-    pub fn new(base: Taijitu, locomotion: Locomotion, resolution: u8, chord: [i32; 64]) -> Self {
-        Self { base, locomotion, resolution, chord }
+    pub fn new(base: Taijitu, locomotion: Locomotion, resolution: u8, pos: Pos, chord: [i32; 64]) -> Self {
+        Self { base, locomotion, resolution, pos, chord }
     }
 }
 
@@ -77,10 +97,16 @@ impl Spawner {
             }
         }
 
+        let pos = Pos {
+            x: rng.gen_range(-180.0..180.0),
+            y: rng.gen_range(-90.0..90.0),
+        };
+
         RavelObject::new(
-            Taijitu::Object, 
-            Locomotion::Passive, 
-            epoch_resolution, 
+            Taijitu::Object,
+            Locomotion::Passive,
+            epoch_resolution,
+            pos,
             chord
         )
     }
