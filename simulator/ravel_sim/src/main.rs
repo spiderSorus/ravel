@@ -25,7 +25,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Ravel: Cosmic Sensor".into(),
-                mode: WindowMode::BorderlessFullscreen, // Maximized
+                mode: WindowMode::Windowed,
                 ..default()
             }),
             ..default()
@@ -45,7 +45,7 @@ fn setup(
 ) {
     // Configure Line Drawing (The Pizza)
     let (config, _) = gizmo_config.config_mut::<DefaultGizmoConfigGroup>();
-    config.line_width = 3.0;
+    config.line_width = 1.0;
 
     // 1. Spawn Camera (2D)
     commands.spawn(Camera2dBundle::default());
@@ -144,59 +144,17 @@ fn simulation_tick(
     sim.universe.sample_graph();
 }
 
-// --- SYSTEM: THE VISUALIZATION ---
-fn draw_mandala(
-    mut gizmos: Gizmos, 
-    sim: Res<SimulationState>
-) {
-    let chord = &sim.universe.global_chord;
+fn draw_mandala(mut gizmos: Gizmos) {
     let center = Vec2::ZERO;
     let radius = 300.0;
-    let grid_color = Color::rgb(0.3, 0.3, 0.3); // Light Grey Outline
+    let color = Color::GRAY;
 
-    // 1. Draw Static Sector Outlines (The Grid)
     for i in 0..64 {
         let angle = (i as f32 / 64.0) * std::f32::consts::TAU;
         let direction = Vec2::new(angle.cos(), angle.sin());
-        
-        gizmos.line_2d(
-            center, 
-            center + (direction * radius),
-            grid_color
-        );
+        gizmos.line_2d(center, center + (direction * radius), color);
     }
-    
-    // Draw Rings
-    gizmos.circle_2d(center, 50.0, grid_color);
-    gizmos.circle_2d(center, radius, grid_color);
-
-    // 2. Draw Dynamic Data
-    for (i, &gate) in RAVE_MANDALA.iter().enumerate() {
-        let angle = ((i as f32 + 0.5) / 64.0) * std::f32::consts::TAU;
-        let direction = Vec2::new(angle.cos(), angle.sin());
-
-        let binary_idx = gate_to_binary(gate) as usize;
-        let raw_val = chord[binary_idx];
-        let strength = raw_val.abs() as f32;
-
-        let len = 50.0 + (strength * 2.0).min(radius - 50.0); 
-
-        let color = if raw_val > 0 {
-            Color::GOLD
-        } else {
-            Color::TURQUOISE
-        };
-
-        gizmos.line_2d(
-            center + (direction * 50.0),
-            center + (direction * len),
-            color
-        );
-
-        if gate == 1 || gate == 2 {
-             gizmos.circle_2d(center + (direction * (len + 20.0)), 10.0, Color::WHITE);
-        }
-    }
+    gizmos.circle_2d(center, radius, color);
 }
 
 fn update_sector_colors(
