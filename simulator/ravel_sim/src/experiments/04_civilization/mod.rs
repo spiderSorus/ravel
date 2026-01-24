@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Spawner, RavelType, Ravel};
+use ravel_ecs::{Spawner, RavelType, MultiverseId, MultiverseState};
 
 pub struct CivilizationPlugin;
 
@@ -12,47 +12,45 @@ impl Plugin for CivilizationPlugin {
     }
 }
 
-fn setup(mut sim: ResMut<SimulationState>) {
-    sim.multiverse.world.clear_entities();
-    sim.multiverse.global_chord = [0; 64];
-    sim.current_resolution = 64; // "Same epoch of 64"
+fn setup(
+    mut commands: Commands,
+    mut sim: ResMut<SimulationState>,
+    mut multiverse_state: ResMut<MultiverseState>,
+) {
+    multiverse_state.reset_chord();
+    sim.current_resolution = 64;
     sim.timer = Timer::from_seconds(0.01, TimerMode::Repeating);
     sim.step_counter = 0;
 
-    // Spawn 20 fully formed (Res 64)
+    let multiverse_id = MultiverseId(4); // Civilization multiverse ID
+    
     for _ in 0..20 {
-        sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
+        let plant = Spawner::spawn(RavelType::Plant, None);
+        commands.spawn((plant, multiverse_id));
     }
 
-    // Spawn 980 random entities
     for _ in 0..980 {
-        sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
+        let plant = Spawner::spawn(RavelType::Plant, None);
+        commands.spawn((plant, multiverse_id));
     }
-    
-    sim.multiverse.sample_graph();
 }
 
-fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
+fn tick(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut sim: ResMut<SimulationState>,
+    multiverse_state: Res<MultiverseState>,
+) {
     sim.timer.tick(time.delta());
     
-    // We only update on tick completion
     if sim.timer.finished() {
-        let count = sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count();
+        let multiverse_id = MultiverseId(4);
+        let batch_size = 100;
         
-        // Target 1,000,000 entities
-        if count < 1_000_000 {
-            // Spawn batch size (e.g. 100 per tick to reach 1M in ~100s)
-            let batch_size = 100; 
-            
-            for _ in 0..batch_size {
-                if sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count() >= 1_000_000 { break; }
-                
-                let entity = Spawner::spawn(RavelType::Balancer, Some(&sim.multiverse.global_chord));
-                sim.multiverse.spawn(entity);
-            }
+        for _ in 0..batch_size {
+            let entity = Spawner::spawn(RavelType::Balancer, Some(&multiverse_state.global_chord));
+            commands.spawn((entity, multiverse_id));
         }
-        
-        sim.multiverse.sample_graph();
     }
 }
 

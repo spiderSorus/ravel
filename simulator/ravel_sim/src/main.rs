@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::window::WindowMode;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
-use ravel_ecs::{Ravel, MultiverseLibrary, ActiveMultiverse};
-use std::any::TypeId;
+use ravel_ecs::{MultiverseLibrary, ActiveMultiverse, MultiverseState};
 
 mod resources;
 mod experiments;
@@ -53,6 +52,7 @@ fn main() {
         .init_resource::<map_resources::LandMask>()
         .init_resource::<MultiverseLibrary>()
         .init_resource::<ActiveMultiverse>()
+        .init_resource::<MultiverseState>()
         .init_state::<AppState>()
         .add_plugins(WorldViewPlugin)
         .add_plugins(ExperimentsPlugin)

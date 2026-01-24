@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use ravel_ecs::{MultiverseState, MultiverseId, MultiverseConfig};
+use ravel_ecs::{MultiverseId, MultiverseConfig};
 
 #[derive(Resource)]
 pub struct SimulationState {

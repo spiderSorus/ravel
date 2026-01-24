@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use crate::resources::SimulationState;
 use crate::AppState;
 use crate::world_view::WorldView;
 use ravel_ecs::iching::{get_hexagram_by_gate, RAVE_MANDALA};
@@ -53,7 +52,7 @@ fn select_entity(
     windows: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut selected: ResMut<SelectedEntity>,
-    sim: Res<SimulationState>,
+    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
         let window = windows.single();
@@ -78,7 +77,6 @@ fn select_entity(
                 (window.width(), window.width() / image_aspect)
             };
 
-            let ravels = sim.multiverse.get_all_ravels();
             for (idx, ravel) in ravels.iter().enumerate() {
                 let (x, y) = ravel.pos.to_mercator();
                 
@@ -100,10 +98,10 @@ fn select_entity(
 fn update_visualizer_ui(
     mut commands: Commands,
     selected: Res<SelectedEntity>,
-    sim: Res<SimulationState>,
     query: Query<Entity, With<VisualizerUi>>,
     asset_server: Res<AssetServer>,
     mut last_selected: Local<Option<usize>>,
+    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
 ) {
     // If selection hasn't changed, don't refresh the UI (keeps Tooltips and Interactions stable)
     if *last_selected == selected.0 && !query.is_empty() {
@@ -119,22 +117,14 @@ fn update_visualizer_ui(
         return;
     };
 
-    // If selected index is invalid (e.g. simulation reset), remove UI
-    if idx >= sim.multiverse.world.iter_entities().count() {
-        for entity in query.iter() {
-            commands.entity(entity).despawn_recursive();
-        }
-        return;
-    }
-
     // Refresh UI
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
 
     // Get the nth ravel from the list
-    let ravels = sim.multiverse.get_all_ravels();
-    let Some(ravel) = ravels.get(idx) else {
+    let ravels_vec: Vec<_> = ravels.iter().collect();
+    let Some(ravel) = ravels_vec.get(idx) else {
         return;
     };
     

@@ -3,7 +3,6 @@ use bevy::render::render_resource::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
 use ravel_ecs::iching::{gate_to_binary, get_hexagram_by_gate, RAVE_MANDALA};
-use crate::resources::SimulationState;
 use crate::AppState;
 use crate::world_view::WorldView;
 
@@ -141,11 +140,11 @@ fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>) {
 }
 
 fn update_sector_colors(
-    sim: Res<SimulationState>,
+    multiverse_state: Res<ravel_ecs::MultiverseState>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&SectorIndex, &Handle<ColorMaterial>)>,
 ) {
-    let chord = &sim.multiverse.global_chord;
+    let chord = &multiverse_state.global_chord;
     let max_val = chord.iter().map(|v: &i128| v.abs()).max().unwrap_or(1) as f64;
     let max_val = max_val.max(10.0); 
 
@@ -204,12 +203,13 @@ pub fn setup_population_ui(mut commands: Commands, asset_server: Res<AssetServer
 }
 
 fn update_population_stats(
-    sim: Res<SimulationState>,
+    multiverse_state: Res<ravel_ecs::MultiverseState>,
     mut query: Query<(&mut Text, &mut Style, &Visibility), With<PopulationUi>>,
     app_state: Res<State<AppState>>,
     world_view: Res<State<WorldView>>,
     mut timer: Local<Timer>,
     time: Res<Time>,
+    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
 ) {
     if timer.duration() == std::time::Duration::ZERO {
         *timer = Timer::from_seconds(0.5, TimerMode::Repeating);
@@ -233,11 +233,11 @@ fn update_population_stats(
         }
         
         if style.display != Display::None && timer.finished() {
-            let total = sim.multiverse.world.iter_entities().count();
+            let total = ravels.iter().count();
             let mut output = format!("Total Population: {}\n", total);
             output.push_str("Cumulative Affinity Scores:\n");
 
-            let chord = &sim.multiverse.global_chord;
+            let chord = &multiverse_state.global_chord;
             
             // 4 columns of 16 rows
             let rows = 16;

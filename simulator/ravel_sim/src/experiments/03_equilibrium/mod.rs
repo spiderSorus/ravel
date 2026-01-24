@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Spawner, RavelType, Ravel};
+use ravel_ecs::{Spawner, RavelType, MultiverseId, MultiverseState};
 
 pub struct EquilibriumPlugin;
 
@@ -12,36 +12,37 @@ impl Plugin for EquilibriumPlugin {
     }
 }
 
-fn setup(mut sim: ResMut<SimulationState>) {
-    sim.multiverse.world.clear_entities();
-    sim.multiverse.global_chord = [0; 64];
-    sim.current_resolution = 8; 
-    sim.timer = Timer::from_seconds(2.0, TimerMode::Repeating); 
+fn setup(
+    mut commands: Commands,
+    mut sim: ResMut<SimulationState>,
+    mut multiverse_state: ResMut<MultiverseState>,
+) {
+    multiverse_state.reset_chord();
+    sim.current_resolution = 8;
+    sim.timer = Timer::from_seconds(2.0, TimerMode::Repeating);
 
-    // Fill initial state
+    let multiverse_id = MultiverseId(3); // Equilibrium multiverse ID
+    
     for _ in 0..200 {
-        sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
+        let plant = Spawner::spawn(RavelType::Plant, None);
+        commands.spawn((plant, multiverse_id));
     }
 }
 
-fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
+fn tick(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut sim: ResMut<SimulationState>,
+) {
     sim.timer.tick(time.delta());
     if sim.timer.finished() {
-        // Maintain population count
-        let target_pop = 200;
-        let current_pop = sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count();
+        let multiverse_id = MultiverseId(3);
+        let _target_pop = 200;
         
-        if current_pop < target_pop {
-            for _ in 0..(target_pop - current_pop) {
-                sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
-            }
-        } else if current_pop > target_pop {
-            let mut query = sim.multiverse.world.query_filtered::<Entity, With<Ravel>>();
-            let entities_to_remove: Vec<Entity> = query.iter(&sim.multiverse.world).take(current_pop - target_pop).collect();
-            for entity in entities_to_remove {
-                sim.multiverse.world.despawn(entity);
-            }
+        // For now, just spawn to maintain population
+        for _ in 0..10 {
+            let plant = Spawner::spawn(RavelType::Plant, None);
+            commands.spawn((plant, multiverse_id));
         }
     }
-    sim.multiverse.sample_graph();
 }

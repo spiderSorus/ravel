@@ -7,4 +7,3 @@ pub mod rules;
 pub use ravel::*;
 pub use multiverse::*;
 pub use spawner::*;
-pub use rules::*;

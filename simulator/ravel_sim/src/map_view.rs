@@ -1,7 +1,6 @@
 
 use bevy::prelude::*;
 use crate::AppState;
-use crate::resources::SimulationState;
 use crate::world_view::WorldView;
 
 pub struct MapViewPlugin;
@@ -87,9 +86,9 @@ fn manage_map_visibility(
 
 fn draw_entities_on_map(
     mut gizmos: Gizmos,
-    sim: Res<SimulationState>,
     visibility: Res<MapViewVisibility>,
     windows: Query<&Window>,
+    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
 ) {
     if !visibility.0 { return; }
 
@@ -105,10 +104,7 @@ fn draw_entities_on_map(
         (window.width(), window.width() / image_aspect)
     };
 
-    // Collect all ravels
-    let ravels = sim.multiverse.get_all_ravels();
-
-    for ravel in ravels {
+    for ravel in ravels.iter() {
         let (x, y) = ravel.pos.to_mercator();
 
         let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * draw_width - draw_width / 2.0;

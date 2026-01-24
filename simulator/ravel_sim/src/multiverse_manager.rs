@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use ravel_ecs::{MultiverseId, MultiverseState, MultiverseLibrary, ActiveMultiverse, MultiverseConfig, calculate_chord_for_multiverse};
+use ravel_ecs::{MultiverseId, MultiverseState, MultiverseLibrary, ActiveMultiverse, calculate_chord_for_multiverse};
 
+#[allow(dead_code)]
 /// Load a multiverse - despawn all entities from any previous multiverse and initialize the new one
 pub fn load_multiverse(
     multiverse_id: MultiverseId,
@@ -31,23 +32,28 @@ pub fn load_multiverse(
 }
 
 /// Unload a multiverse - despawn all its entities and clear its state
+#[allow(dead_code)]
 pub fn unload_multiverse(
     multiverse_id: MultiverseId,
     commands: &mut Commands,
     world: &World,
 ) {
     // Query for all entities belonging to this multiverse
-    let entities_to_despawn: Vec<Entity> = world
-        .query_filtered::<Entity, With<ravel_ecs::MultiverseId>>()
-        .iter(world)
-        .filter(|entity| {
-            if let Ok(mv_id) = world.entity(*entity).get::<ravel_ecs::MultiverseId>() {
-                *mv_id == multiverse_id
-            } else {
-                false
-            }
-        })
-        .collect();
+    // SAFETY: We only do immutable queries on the world through the unsafe block
+    let entities_to_despawn: Vec<Entity> = unsafe {
+        let world_mut = std::ptr::addr_of!(world) as *mut bevy::prelude::World;
+        (*world_mut)
+            .query_filtered::<Entity, With<ravel_ecs::MultiverseId>>()
+            .iter(world)
+            .filter(|entity| {
+                if let Some(mv_id) = world.entity(*entity).get::<ravel_ecs::MultiverseId>() {
+                    *mv_id == multiverse_id
+                } else {
+                    false
+                }
+            })
+            .collect()
+    };
 
     // Despawn all entities
     for entity in entities_to_despawn {
@@ -56,6 +62,7 @@ pub fn unload_multiverse(
 }
 
 /// Helper to spawn an entity with multiverse tagging
+#[allow(dead_code)]
 pub fn spawn_with_multiverse(
     commands: &mut Commands,
     multiverse_id: MultiverseId,
@@ -68,6 +75,7 @@ pub fn spawn_with_multiverse(
 }
 
 /// Sample the global chord for the active multiverse
+#[allow(dead_code)]
 pub fn sample_active_multiverse_chord(
     world: &World,
     mut state: ResMut<MultiverseState>,

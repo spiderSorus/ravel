@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Spawner, RavelType, Ravel};
+use ravel_ecs::{Spawner, RavelType, MultiverseId, MultiverseState};
 
 pub struct EntropyPlugin;
 
@@ -12,30 +12,28 @@ impl Plugin for EntropyPlugin {
     }
 }
 
-fn setup(mut sim: ResMut<SimulationState>) {
-    sim.multiverse.world.clear_entities();
-    sim.multiverse.global_chord = [0; 64];
-    sim.current_resolution = 32; 
-    sim.timer = Timer::from_seconds(0.1, TimerMode::Repeating); 
+fn setup(
+    mut sim: ResMut<SimulationState>,
+    mut multiverse_state: ResMut<MultiverseState>,
+) {
+    multiverse_state.reset_chord();
+    sim.current_resolution = 32;
+    sim.timer = Timer::from_seconds(0.1, TimerMode::Repeating);
 }
 
-fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
+fn tick(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut sim: ResMut<SimulationState>,
+) {
     sim.timer.tick(time.delta());
     if sim.timer.finished() {
-        // Randomly remove some entities
-        if sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count() > 1000 {
-            let mut query = sim.multiverse.world.query_filtered::<Entity, With<Ravel>>();
-            let entities_to_remove: Vec<Entity> = query.iter(&sim.multiverse.world).take(500).collect();
-            for entity in entities_to_remove {
-                sim.multiverse.world.despawn(entity);
-            }
-        }
+        let multiverse_id = MultiverseId(2);
         
         // Spawn high res noise
         for _ in 0..100 {
-             let plant = Spawner::spawn(RavelType::Plant, None);
-             sim.multiverse.spawn(plant);
+            let plant = Spawner::spawn(RavelType::Plant, None);
+            commands.spawn((plant, multiverse_id));
         }
     }
-    sim.multiverse.sample_graph();
 }
