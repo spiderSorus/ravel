@@ -1,0 +1,9 @@
+[package]
+name = "ravel_sim"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ravel_ecs = { path = "../ravel_ecs" }
+bevy = "0.13"
+rand = "0.8"
