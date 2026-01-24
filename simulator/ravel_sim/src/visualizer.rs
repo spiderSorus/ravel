@@ -11,12 +11,19 @@ pub struct SelectedEntity(pub Option<usize>);
 #[derive(Component)]
 struct VisualizerUi;
 
+#[derive(Component)]
+struct GateCell(i32); // Stores the value to display in tooltip
+
+#[derive(Component)]
+struct TooltipUi;
+
 impl Plugin for VisualizerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SelectedEntity>()
            .add_systems(Update, (
                select_entity.run_if(in_state(AppState::Simulation)),
                update_visualizer_ui.run_if(in_state(AppState::Simulation)),
+               handle_tooltip.run_if(in_state(AppState::Simulation)),
            ))
            .add_systems(OnExit(AppState::Simulation), cleanup_visualizer);
     }
@@ -41,17 +48,22 @@ fn select_entity(
             let mut closest = None;
             let mut min_dist = 20.0; // Click radius
             
-            let width = window.width();
-            let height = window.height();
+            let image_width = 2000.0;
+            let image_height = 1478.0;
+            let image_aspect = image_width / image_height;
+            let window_aspect = window.width() / window.height();
+
+            let (draw_width, draw_height) = if window_aspect > image_aspect {
+                (window.height() * image_aspect, window.height())
+            } else {
+                (window.width(), window.width() / image_aspect)
+            };
 
             for (idx, entity) in sim.universe.entities.iter().enumerate() {
-                // Approximate mapping from lon/lat to world coords (simplified)
-                // lon -180..180 -> screen width, lat -90..90 -> screen height
-                // We use the same projection as map_view for consistency
                 let (x, y) = entity.pos.to_mercator();
                 
-                let world_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * width - width / 2.0;
-                let world_y = (y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * height - height / 2.0;
+                let world_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * draw_width - draw_width / 2.0;
+                let world_y = -((y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * draw_height - draw_height / 2.0);
                 
                 let dist = world_pos.distance(Vec2::new(world_x, world_y));
                 if dist < min_dist {
@@ -71,7 +83,14 @@ fn update_visualizer_ui(
     sim: Res<SimulationState>,
     query: Query<Entity, With<VisualizerUi>>,
     asset_server: Res<AssetServer>,
+    mut last_selected: Local<Option<usize>>,
 ) {
+    // If selection hasn't changed, don't refresh the UI (keeps Tooltips and Interactions stable)
+    if *last_selected == selected.0 && !query.is_empty() {
+        return;
+    }
+    *last_selected = selected.0;
+
     // If nothing selected, remove UI
     let Some(idx) = selected.0 else {
         for entity in query.iter() {
@@ -88,7 +107,7 @@ fn update_visualizer_ui(
         return;
     }
 
-    // Refresh UI (despawn and respawn for simplicity in this version)
+    // Refresh UI
     for entity in query.iter() {
         commands.entity(entity).despawn_recursive();
     }
@@ -109,7 +128,7 @@ fn update_visualizer_ui(
                 padding: UiRect::all(Val::Px(20.0)),
                 ..default()
             },
-            background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.9)),
+            background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 1.0)),
             ..default()
         },
         VisualizerUi,
@@ -132,27 +151,34 @@ fn update_visualizer_ui(
             ..default()
         }).with_children(|grid| {
             // We use RAVE_MANDALA order
-            for (i, &gate) in RAVE_MANDALA.iter().enumerate() {
+            for (_i, &gate) in RAVE_MANDALA.iter().enumerate() {
                 let hex = get_hexagram_by_gate(gate);
                 let binary_idx = ravel_ecs::iching::gate_to_binary(gate) as usize;
                 
                 let val = entity_data.chord[binary_idx];
-                let val_bool = val > 0;
                 
-                let symbol_color = if val_bool {
-                    Color::srgb(0.0, 1.0, 0.0) // Green
+                let symbol_color = if val > 0 {
+                    let intensity = (val as f32 / 100.0).clamp(0.0, 1.0);
+                    Color::srgb(1.0 - intensity, 1.0, 1.0 - intensity) // Greenish
+                } else if val < 0 {
+                    let intensity = (val.abs() as f32 / 100.0).clamp(0.0, 1.0);
+                    Color::srgb(1.0, 1.0 - intensity, 1.0 - intensity) // Reddish
                 } else {
-                    Color::srgb(1.0, 0.0, 0.0) // Red
+                    Color::srgb(0.5, 0.5, 0.5) // Neutral Grey
                 };
 
-                grid.spawn(NodeBundle {
-                    style: Style {
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
+                grid.spawn((
+                    NodeBundle {
+                        style: Style {
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
                         ..default()
                     },
-                    ..default()
-                }).with_children(|cell| {
+                    Interaction::default(),
+                    GateCell(val),
+                )).with_children(|cell| {
                     cell.spawn(TextBundle::from_section(
                         hex.character.to_string(),
                         TextStyle { font: symbol_font.clone(), font_size: 40.0, color: symbol_color }
@@ -161,6 +187,54 @@ fn update_visualizer_ui(
             }
         });
     });
+}
+
+fn handle_tooltip(
+    mut commands: Commands,
+    cell_query: Query<(&Interaction, &GateCell)>,
+    tooltip_query: Query<Entity, With<TooltipUi>>,
+    asset_server: Res<AssetServer>,
+    windows: Query<&Window>,
+) {
+    let window = windows.single();
+    let mouse_pos = window.cursor_position();
+
+    let mut hovered_val = None;
+    for (interaction, cell) in cell_query.iter() {
+        if *interaction == Interaction::Hovered {
+            hovered_val = Some(cell.0);
+            break;
+        }
+    }
+
+    if let Some(val) = hovered_val {
+        if let Some(pos) = mouse_pos {
+            // Remove old tooltip
+            for entity in tooltip_query.iter() {
+                commands.entity(entity).despawn_recursive();
+            }
+
+            let font = asset_server.load("FiraSans-Bold.ttf");
+            commands.spawn((
+                TextBundle::from_section(
+                    format!("{}", val),
+                    TextStyle { font: font, font_size: 20.0, color: Color::WHITE }
+                )
+                .with_style(Style {
+                    position_type: PositionType::Absolute,
+                    left: Val::Px(pos.x),
+                    top: Val::Px(pos.y - 25.0), // Floating just above
+                    ..default()
+                }),
+                TooltipUi,
+            ));
+        }
+    } else {
+        // No hover, remove tooltip
+        for entity in tooltip_query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
 }
 
 fn cleanup_visualizer(mut commands: Commands, query: Query<Entity, With<VisualizerUi>>) {

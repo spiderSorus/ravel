@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::Spawner;
+use ravel_ecs::{Spawner, RavelType};
 
 pub struct EntropyPlugin;
 
@@ -29,7 +29,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         
         // Spawn high res noise
         for _ in 0..100 {
-             let plant = Spawner::spawn_plant();
+             let plant = Spawner::spawn(RavelType::Plant, None);
              sim.universe.spawn(plant);
         }
     }

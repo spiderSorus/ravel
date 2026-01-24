@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Ravel, Locomotion, Spawner};
-use rand::Rng;
+use ravel_ecs::{Spawner, RavelType};
 
 pub struct CivilizationPlugin;
 
@@ -24,12 +23,12 @@ fn setup(mut sim: ResMut<SimulationState>) {
 
     // Spawn 20 fully formed (Res 64)
     for _ in 0..20 {
-        sim.universe.spawn(Spawner::spawn_plant());
+        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
     }
 
     // Spawn 980 random entities (8 tiers of 8: 8, 16, 24, 32, 40, 48, 56, 64)
     for _ in 0..980 {
-        sim.universe.spawn(Spawner::spawn_plant());
+        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
     }
     
     sim.universe.sample_graph();
@@ -51,7 +50,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
             for _ in 0..batch_size {
                 if sim.universe.entities.len() >= 1_000_000 { break; }
                 
-                let entity = spawn_balancer(&sim.universe.global_chord);
+                let entity = Spawner::spawn(RavelType::Balancer, Some(&sim.universe.global_chord));
                 sim.universe.spawn(entity);
             }
         }
@@ -65,35 +64,3 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
     }
 }
 
-fn spawn_balancer(global_chord: &[i32; 64]) -> Ravel {
-    let mut rng = rand::thread_rng();
-    let mut chord = [0; 64];
-
-    for i in 0..64 {
-        // Balancing logic: 
-        // If global is positive, we want negative.
-        // If global is negative, we want positive.
-        let current_val = global_chord[i];
-        
-        // 50% chance to have a value at this position (like Spawner)
-        if rng.gen_bool(0.5) {
-             if current_val > 0 {
-                 chord[i] = rng.gen_range(-100..0);
-             } else if current_val < 0 {
-                 chord[i] = rng.gen_range(0..100);
-             } else {
-                 chord[i] = rng.gen_range(-100..100);
-             }
-        }
-    }
-
-    let degree = rng.gen_range(0.0..360.0);
-
-    Ravel::new(
-        true, // Taijitu::Object
-        Locomotion::Active,
-        degree,
-        ravel_ecs::Pos { x: 0.0, y: 0.0 },
-        chord
-    )
-}

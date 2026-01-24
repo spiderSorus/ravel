@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
 use crate::map_resources::{LandMask, LandMaskLoaded};
-use ravel_ecs::Spawner;
+use ravel_ecs::{Spawner, RavelType};
 use rand::Rng;
 
 pub struct PopulationMapPlugin;
@@ -47,7 +47,7 @@ fn tick(
             let lat = rng.gen_range(-60.0..85.0); // Focus on habitable latitudes
 
             if land_mask.is_land(lon, lat) {
-                let mut entity = Spawner::spawn_plant();
+                let mut entity = Spawner::spawn(RavelType::Plant, None);
                 entity.pos = ravel_ecs::Pos::new(lon, lat);
                 sim.universe.spawn(entity);
                 spawned += 1;

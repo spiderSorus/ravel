@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::Spawner;
+use ravel_ecs::{Spawner, RavelType};
 
 pub struct EquilibriumPlugin;
 
@@ -20,7 +20,7 @@ fn setup(mut sim: ResMut<SimulationState>) {
 
     // Fill initial state
     for _ in 0..200 {
-        sim.universe.spawn(Spawner::spawn_plant());
+        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
     }
 }
 
@@ -33,7 +33,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         
         if current_pop < target_pop {
             for _ in 0..(target_pop - current_pop) {
-                sim.universe.spawn(Spawner::spawn_plant());
+                sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
             }
         } else if current_pop > target_pop {
             sim.universe.entities.truncate(target_pop);

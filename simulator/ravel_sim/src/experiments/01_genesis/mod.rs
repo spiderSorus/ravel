@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::Spawner;
+use ravel_ecs::{Spawner, RavelType};
 
 pub struct GenesisPlugin;
 
@@ -21,7 +21,7 @@ fn setup(mut sim: ResMut<SimulationState>) {
     
     // Seed
     for _ in 0..50 {
-        sim.universe.spawn(Spawner::spawn_plant());
+        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
     }
 }
 
@@ -43,7 +43,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         }
         
         for _ in 0..20 {
-             let plant = Spawner::spawn_plant();
+             let plant = Spawner::spawn(RavelType::Plant, None);
              sim.universe.spawn(plant);
         }
     }
