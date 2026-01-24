@@ -2,23 +2,33 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::window::WindowMode;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
-use bevy::render::render_resource::PrimitiveTopology;
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
-use ravel_ecs::{Multiverse, Spawner};
-use ravel_ecs::iching::{gate_to_binary, RAVE_MANDALA};
+use ravel_ecs::Multiverse;
+
+mod resources;
+mod experiments;
+mod view;
+
+use resources::SimulationState;
+use experiments::{ExperimentsPlugin, ExperimentState, EXPERIMENTS};
+use view::MandalaViewPlugin;
+
+// --- STATES ---
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
+pub enum AppState {
+    #[default]
+    Menu,
+    Simulation,
+}
 
 // --- COMPONENTS ---
 #[derive(Component)]
-struct SectorIndex(usize);
+struct MenuUi;
 
-// --- RESOURCES ---
-#[derive(Resource)]
-struct SimulationState {
-    universe: Multiverse,
-    timer: Timer,
-    current_resolution: u8,
-}
+#[derive(Component)]
+struct ExperimentButton(usize);
+
+#[derive(Component)]
+struct KeymapUi;
 
 fn main() {
     App::new()
@@ -30,161 +40,177 @@ fn main() {
             }),
             ..default()
         }))
-        .insert_resource(ClearColor(Color::rgb(0.05, 0.05, 0.05))) // Deep Space Background
-        .add_systems(Startup, setup)
-        .add_systems(Update, (simulation_tick, draw_mandala, update_sector_colors, quit_simulation))
+        .insert_resource(ClearColor(Color::rgb(0.05, 0.05, 0.05)))
+        .init_state::<AppState>()
+        .add_plugins(ExperimentsPlugin)
+        .add_plugins(MandalaViewPlugin)
+        
+        .add_systems(Startup, (setup_app, setup_keymap_ui))
+        .add_systems(OnExit(AppState::Simulation), cleanup_simulation)
+        .add_systems(Update, (
+            quit_simulation,
+            return_to_menu,
+            toggle_keymap_ui,
+        ))
+        
+        .add_systems(OnEnter(AppState::Menu), setup_menu)
+        .add_systems(OnExit(AppState::Menu), cleanup_menu)
+        .add_systems(Update, menu_interaction.run_if(in_state(AppState::Menu)))
+        
         .run();
 }
 
-fn setup(
+fn setup_app(
     mut commands: Commands, 
     mut gizmo_config: ResMut<GizmoConfigStore>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>
 ) {
-    // Configure Line Drawing (The Pizza)
     let (config, _) = gizmo_config.config_mut::<DefaultGizmoConfigGroup>();
     config.line_width = 1.0;
 
-    // 1. Spawn Camera (2D)
     commands.spawn(Camera2dBundle::default());
-
-    // 2. Spawn Sectors (Background)
-    let radius = 300.0;
-    for i in 0..64 {
-        let angle_start = (i as f32 / 64.0) * std::f32::consts::TAU;
-        let angle_end = ((i + 1) as f32 / 64.0) * std::f32::consts::TAU;
-        
-        let v0 = Vec3::ZERO;
-        let v1 = Vec3::new(angle_start.cos() * radius, angle_start.sin() * radius, 0.0);
-        let v2 = Vec3::new(angle_end.cos() * radius, angle_end.sin() * radius, 0.0);
-
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vec![
-            [v0.x, v0.y, v0.z],
-            [v1.x, v1.y, v1.z],
-            [v2.x, v2.y, v2.z],
-        ]);
-
-        commands.spawn((
-            MaterialMesh2dBundle {
-                mesh: Mesh2dHandle(meshes.add(mesh)),
-                material: materials.add(ColorMaterial::from(Color::BLACK)), 
-                transform: Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
-                ..default()
-            },
-            SectorIndex(i),
-        ));
-    }
-
-    // 3. Spawn Gate Labels
-    let label_radius = 330.0;
-    let font = asset_server.load("FiraSans-Bold.ttf");
-
-    for (i, &gate) in RAVE_MANDALA.iter().enumerate() {
-        let angle = ((i as f32 + 0.5) / 64.0) * std::f32::consts::TAU;
-        let x = label_radius * angle.cos();
-        let y = label_radius * angle.sin();
-
-        commands.spawn(Text2dBundle {
-            text: Text::from_section(
-                format!("{}", gate),
-                TextStyle {
-                    font: font.clone(),
-                    font_size: 14.0,
-                    color: Color::rgb(0.7, 0.7, 0.7),
-                },
-            ),
-            transform: Transform::from_translation(Vec3::new(x, y, 1.0)),
-            ..default()
-        });
-    }
-
-    // 4. Initialize the Physics Engine
-    let mut universe = Multiverse::new();
-    
-    // Pre-seed it slightly
-    for _ in 0..100 {
-        universe.spawn(Spawner::spawn_plant(1)); // Start at Res 1
-    }
-
     commands.insert_resource(SimulationState {
-        universe,
-        timer: Timer::from_seconds(2.0, TimerMode::Repeating), // Evolve every 2s
+        universe: Multiverse::new(),
+        timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         current_resolution: 1,
+        step_counter: 0,
     });
 }
 
-// --- SYSTEM: THE PHYSICS LOOP ---
-fn simulation_tick(
-    time: Res<Time>,
-    mut sim: ResMut<SimulationState>,
-) {
-    // 1. Tick the Evolution Timer
-    sim.timer.tick(time.delta());
-    if sim.timer.finished() {
-        // Bump Resolution: 1 -> 2 -> 4 -> 8...
-        if sim.current_resolution < 64 {
-            sim.current_resolution *= 2;
-        } else {
-            sim.current_resolution = 1; // Loop back for demo
-            sim.universe.entities.clear();
+fn cleanup_simulation(mut sim: ResMut<SimulationState>) {
+    sim.universe.entities.clear();
+    sim.universe.global_chord = [0; 64];
+}
+
+// --- KEYMAP UI ---
+fn setup_keymap_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font = asset_server.load("FiraSans-Bold.ttf");
+    let key_style = TextStyle { font: font.clone(), font_size: 16.0, color: Color::WHITE };
+    let desc_style = TextStyle { font: font.clone(), font_size: 16.0, color: Color::GRAY };
+
+    commands.spawn((
+        NodeBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(10.0),
+                right: Val::Px(10.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::FlexEnd,
+                ..default()
+            },
+            visibility: Visibility::Hidden,
+            ..default()
+        },
+        KeymapUi,
+    )).with_children(|parent| {
+        parent.spawn(TextBundle::from_sections([
+            TextSection::new("Z ", key_style.clone()),
+            TextSection::new("- Toggle Keymap\n", desc_style.clone()),
+            TextSection::new("P ", key_style.clone()),
+            TextSection::new("- Toggle Population\n", desc_style.clone()),
+            TextSection::new("T ", key_style.clone()),
+            TextSection::new("- Toggle Pizza View\n", desc_style.clone()),
+            TextSection::new("E ", key_style.clone()),
+            TextSection::new("- Toggle Entity View", desc_style.clone()),
+        ]));
+    });
+}
+
+fn toggle_keymap_ui(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Visibility, With<KeymapUi>>) {
+    if keys.just_pressed(KeyCode::KeyZ) {
+        for mut visibility in query.iter_mut() {
+            *visibility = if *visibility == Visibility::Hidden { Visibility::Visible } else { Visibility::Hidden };
         }
+    }
+}
+
+
+// --- MENU SYSTEM ---
+fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let font = asset_server.load("FiraSans-Bold.ttf");
+    let mut sorted_indices: Vec<usize> = (0..EXPERIMENTS.len()).collect();
+    sorted_indices.sort_by(|&a, &b| EXPERIMENTS[b].id.cmp(&EXPERIMENTS[a].id));
+    
+    commands.spawn((
+        NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                row_gap: Val::Px(10.0),
+                ..default()
+            },
+            background_color: BackgroundColor(Color::rgba(0.0, 0.0, 0.0, 0.8)),
+            ..default()
+        },
+        MenuUi,
+    )).with_children(|parent| {
+        parent.spawn(TextBundle::from_section("SELECT EXPERIMENT", TextStyle { font: font.clone(), font_size: 30.0, color: Color::WHITE }));
         
-        // Spawn new generation
-        for _ in 0..50 {
-             let plant = Spawner::spawn_plant(sim.current_resolution);
-             sim.universe.spawn(plant);
+        for (i, &exp_idx) in sorted_indices.iter().enumerate() {
+            let exp = &EXPERIMENTS[exp_idx];
+            let hue = if sorted_indices.len() > 1 { i as f32 / (sorted_indices.len() - 1) as f32 * 270.0 } else { 0.0 };
+            
+            parent.spawn((
+                ButtonBundle {
+                    style: Style {
+                        width: Val::Px(400.0),
+                        height: Val::Px(80.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        flex_direction: FlexDirection::Column,
+                        ..default()
+                    },
+                    background_color: BackgroundColor(Color::hsl(hue, 1.0, 0.5)),
+                    ..default()
+                },
+                ExperimentButton(exp_idx),
+            )).with_children(|parent| {
+                parent.spawn(TextBundle::from_section(format!("{}. {}", exp.id, exp.name), TextStyle { font: font.clone(), font_size: 28.0, color: Color::WHITE }));
+                parent.spawn(TextBundle::from_section(exp.description, TextStyle { font: font.clone(), font_size: 16.0, color: Color::rgba(1.0, 1.0, 1.0, 0.8) }));
+            });
         }
-    }
-
-    // 2. ALWAYS SAMPLE (Every Frame)
-    // The sensor reads the graph constantly
-    sim.universe.sample_graph();
+    });
 }
 
-fn draw_mandala(mut gizmos: Gizmos) {
-    let center = Vec2::ZERO;
-    let radius = 300.0;
-    let color = Color::GRAY;
-
-    for i in 0..64 {
-        let angle = (i as f32 / 64.0) * std::f32::consts::TAU;
-        let direction = Vec2::new(angle.cos(), angle.sin());
-        gizmos.line_2d(center, center + (direction * radius), color);
+fn cleanup_menu(mut commands: Commands, query: Query<Entity, With<MenuUi>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
     }
-    gizmos.circle_2d(center, radius, color);
 }
 
-fn update_sector_colors(
-    sim: Res<SimulationState>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    query: Query<(&SectorIndex, &Handle<ColorMaterial>)>,
+fn menu_interaction(
+    mut interaction_query: Query<(&Interaction, &ExperimentButton), (Changed<Interaction>, With<Button>)>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+    mut next_exp_state: ResMut<NextState<ExperimentState>>,
 ) {
-    let chord = &sim.universe.global_chord;
-    let max_val = chord.iter().map(|v| v.abs()).max().unwrap_or(1) as f32;
-    let max_val = max_val.max(100.0); 
-
-    for (sector, mat_handle) in query.iter() {
-        let gate = RAVE_MANDALA[sector.0];
-        let binary_idx = gate_to_binary(gate) as usize;
-        let val = chord[binary_idx].abs() as f32;
-
-        let intensity = (val / max_val).clamp(0.0, 1.0);
-        let color = Color::rgb(intensity, intensity, intensity);
-
-        if let Some(mat) = materials.get_mut(mat_handle) {
-            mat.color = color;
+    for (interaction, button) in interaction_query.iter_mut() {
+        if *interaction == Interaction::Pressed {
+            next_app_state.set(AppState::Simulation);
+            next_exp_state.set(EXPERIMENTS[button.0].state);
         }
     }
+}
+
+fn return_to_menu(
+    keys: Res<ButtonInput<KeyCode>>,
+    app_state: Res<State<AppState>>,
+    mut next_app_state: ResMut<NextState<AppState>>,
+    mut next_exp_state: ResMut<NextState<ExperimentState>>,
+) {
+    if keys.just_pressed(KeyCode::Escape) && *app_state.get() == AppState::Simulation {
+        next_app_state.set(AppState::Menu);
+        next_exp_state.set(ExperimentState::None);
+    } 
 }
 
 fn quit_simulation(
     keys: Res<ButtonInput<KeyCode>>,
+    app_state: Res<State<AppState>>,
     mut exit: EventWriter<AppExit>,
 ) {
-    if keys.just_pressed(KeyCode::Escape) {
+    if keys.just_pressed(KeyCode::Escape) && *app_state.get() == AppState::Menu {
         exit.send(AppExit);
     }
 }

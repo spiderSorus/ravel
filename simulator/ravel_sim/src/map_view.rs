@@ -1,0 +1,84 @@
+
+use bevy::prelude::*;
+use crate::AppState;
+use crate::resources::SimulationState;
+
+pub struct MapViewPlugin;
+
+#[derive(Resource, Default)]
+struct MapViewVisibility(pub bool);
+
+#[derive(Component)]
+pub struct MapView;
+
+impl Plugin for MapViewPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(MapViewVisibility(true));
+
+        app.add_systems(OnEnter(AppState::Simulation), setup_map)
+           .add_systems(OnExit(AppState::Simulation), cleanup_map)
+           .add_systems(Update, (
+               toggle_map_view.run_if(in_state(AppState::Simulation)),
+               draw_entities_on_map.run_if(in_state(AppState::Simulation)),
+           ));
+    }
+}
+
+fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn((
+        SpriteBundle {
+            texture: asset_server.load("map.svg"),
+            ..default()
+        },
+        MapView,
+    ));
+}
+
+fn cleanup_map(mut commands: Commands, query: Query<Entity, With<MapView>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn toggle_map_view(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut visibility_res: ResMut<MapViewVisibility>,
+    mut query: Query<&mut Visibility, With<MapView>>,
+) {
+    if keys.just_pressed(KeyCode::KeyM) {
+        visibility_res.0 = !visibility_res.0;
+        
+        let new_vis = if visibility_res.0 { Visibility::Visible } else { Visibility::Hidden };
+        
+        for mut vis in query.iter_mut() {
+            *vis = new_vis;
+        }
+    }
+}
+
+fn mercator_projection(lon: f32, lat: f32) -> (f32, f32) {
+    let x = lon.to_radians();
+    let y = (lat.to_radians().sin()).atanh();
+    (x, y)
+}
+
+fn draw_entities_on_map(
+    mut gizmos: Gizmos,
+    sim: Res<SimulationState>,
+    visibility: Res<MapViewVisibility>,
+    windows: Query<&Window>,
+) {
+    if !visibility.0 { return; }
+
+    let window = windows.single();
+    let (width, height) = (window.width(), window.height());
+
+    for entity in &sim.universe.entities {
+        let (lon, lat) = (entity.pos.x, entity.pos.y);
+        let (x, y) = mercator_projection(lon, lat);
+
+        let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * width - width / 2.0;
+        let screen_y = (y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * height - height / 2.0;
+        gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::RED);
+    }
+}
