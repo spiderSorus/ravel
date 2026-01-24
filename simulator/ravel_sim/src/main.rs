@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::window::WindowMode;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
-use ravel_ecs::{Multiverse, Ravel};
+use ravel_ecs::{Ravel, MultiverseLibrary, ActiveMultiverse};
 use std::any::TypeId;
 
 mod resources;
@@ -12,6 +12,7 @@ mod map_view;
 mod map_resources;
 mod visualizer;
 mod world_view;
+mod multiverse_manager;
 
 use resources::SimulationState;
 use experiments::{ExperimentsPlugin, ExperimentState, EXPERIMENTS};
@@ -50,6 +51,8 @@ fn main() {
         }))
         .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.05)))
         .init_resource::<map_resources::LandMask>()
+        .init_resource::<MultiverseLibrary>()
+        .init_resource::<ActiveMultiverse>()
         .init_state::<AppState>()
         .add_plugins(WorldViewPlugin)
         .add_plugins(ExperimentsPlugin)
@@ -83,12 +86,7 @@ fn setup_app(
     config.line_width = 1.0;
 
     commands.spawn(Camera2dBundle::default());
-    commands.insert_resource(SimulationState {
-        multiverse: Multiverse::new(vec![TypeId::of::<Ravel>()]),
-        timer: Timer::from_seconds(1.0, TimerMode::Repeating),
-        current_resolution: 1,
-        step_counter: 0,
-    });
+    commands.insert_resource(SimulationState::default());
 }
 
 fn setup_map_resource(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -96,9 +94,8 @@ fn setup_map_resource(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(map_resources::MapImageHandle(handle));
 }
 
-fn cleanup_simulation(mut sim: ResMut<SimulationState>) {
-    sim.multiverse.world.clear_entities();
-    sim.multiverse.global_chord = [0; 64];
+fn cleanup_simulation(mut active: ResMut<ActiveMultiverse>) {
+    active.clear_active();
 }
 
 // --- KEYMAP UI ---

@@ -2,87 +2,122 @@
 // allowing for dynamic rule sets and behaviors that govern the simulation.
 // This approach enables easy creation of mods and custom experiments.
 
-// --- 1. Core Concepts ---
-//
-// a. Multiverse: A container for entities and a specific set of rules. Each
-//    multiverse is a self-contained simulation environment.
-//
-// b. Rule: A Bevy system that defines a behavior or interaction within a
-//    multiverse. Rules are applied to entities that meet their component
-//    requirements.
-//
-// c. System: A broader concept that can be composed of multiple rules and
-//    component definitions. Systems can be documented in TOML files for clarity
-//    and moddability.
-//
-// d. Modifier: A special type of rule that can alter the environment or other
-//    entities, such as a "god system" that introduces a powerful entity and
-//    changes the simulation's dynamics.
+// --- Architecture ---
+// Each Multiverse is a configuration and state object, not a container.
+// All entities live in a single Bevy World and are tagged with MultiverseId.
+// When a multiverse is loaded, entities are spawned with its genesis rules.
+// When a multiverse is unloaded, all its entities are despawned.
 
 use bevy::prelude::*;
 use crate::ravel::Ravel;
 use std::any::TypeId;
-use downcast_rs::{impl_downcast, Downcast};
 
-// --- 2. Rule Trait ---
-// The `Rule` trait defines the interface for all behaviors in the simulation.
-// Each rule is a system that can be dynamically added to a multiverse.
-pub trait Rule: Downcast + Send + Sync {
-    fn apply(&self, world: &mut World);
-}
-impl_downcast!(Rule);
+// --- MultiverseId Component ---
+// Tags entities with their owning multiverse
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MultiverseId(pub u32);
 
-// --- 3. Multiverse Struct ---
-// The `Multiverse` now holds a Bevy `World` and a list of rules. This allows
-// each multiverse to manage its own entities, components, and systems
-// independently.
-#[derive(Resource)]
-pub struct Multiverse {
-    pub world: World,
-    rules: Vec<Box<dyn Rule>>,
+// --- Multiverse Struct ---
+// Configuration and state for a multiverse (not a World owner)
+#[derive(Clone)]
+pub struct MultiverseConfig {
+    pub id: MultiverseId,
+    pub name: String,
     pub required_components: Vec<TypeId>,
+}
+
+#[derive(Resource, Clone)]
+pub struct MultiverseState {
+    pub config: MultiverseConfig,
     pub global_chord: [i128; 64],
 }
 
-impl Multiverse {
-    pub fn new(required_components: Vec<TypeId>) -> Self {
+impl MultiverseState {
+    pub fn new(config: MultiverseConfig) -> Self {
         Self {
-            world: World::new(),
-            rules: Vec::new(),
-            required_components,
+            config,
             global_chord: [0; 64],
         }
     }
 
-    // Adds a new rule to the multiverse's behavior set.
-    pub fn add_rule<T: Rule + 'static>(&mut self, rule: T) {
-        self.rules.push(Box::new(rule));
+    pub fn reset_chord(&mut self) {
+        self.global_chord = [0; 64];
     }
 
-    // Spawns an entity, but only if it has the required components.
-    pub fn spawn(&mut self, entity: impl Bundle) {
-        // This is a simplified check. A more robust implementation would
-        // involve inspecting the bundle's component types.
-        // For now, we assume the spawner respects the multiverse rules.
-        self.world.spawn(entity);
+    pub fn clear(&mut self) {
+        self.reset_chord();
+    }
+}
+
+// --- Active Multiverse Tracking ---
+#[derive(Resource, Default)]
+pub struct ActiveMultiverse {
+    pub id: Option<MultiverseId>,
+}
+
+impl ActiveMultiverse {
+    pub fn is_loaded(&self) -> bool {
+        self.id.is_some()
     }
 
-    // Applies all registered rules to the multiverse's world.
-    pub fn update(&mut self) {
-        for rule in &self.rules {
-            rule.apply(&mut self.world);
+    pub fn set_active(&mut self, id: MultiverseId) {
+        self.id = Some(id);
+    }
+
+    pub fn clear_active(&mut self) {
+        self.id = None;
+    }
+}
+
+// --- Multiverse Library ---
+// Stores all available multiverse configurations
+#[derive(Resource, Default)]
+pub struct MultiverseLibrary {
+    multiverses: Vec<MultiverseConfig>,
+}
+
+impl MultiverseLibrary {
+    pub fn new() -> Self {
+        Self {
+            multiverses: Vec::new(),
         }
     }
 
-    // A specific system, now implemented as a method that could be called by a rule.
-    pub fn sample_graph(&mut self) {
-        let mut aggregate = [0i128; 64];
-        let mut query = self.world.query::<&Ravel>();
-        for ravel in query.iter(&self.world) {
+    pub fn register(&mut self, config: MultiverseConfig) {
+        self.multiverses.push(config);
+    }
+
+    pub fn get(&self, id: MultiverseId) -> Option<&MultiverseConfig> {
+        self.multiverses.iter().find(|m| m.id == id)
+    }
+
+    pub fn list(&self) -> &[MultiverseConfig] {
+        &self.multiverses
+    }
+}
+
+// --- Helper function to calculate aggregate chord ---
+pub fn calculate_chord_for_multiverse(world: &World, multiverse_id: MultiverseId) -> [i128; 64] {
+    let mut aggregate = [0i128; 64];
+    let mut query = world.query::<(&MultiverseId, &Ravel)>();
+    for (id, ravel) in query.iter(world) {
+        if *id == multiverse_id {
             for i in 0..64 {
                 aggregate[i] += ravel.chord[i] as i128;
             }
         }
-        self.global_chord = aggregate;
     }
+    aggregate
+}
+
+// --- Helper function to get all ravels in a multiverse ---
+pub fn get_ravels_for_multiverse(world: &World, multiverse_id: MultiverseId) -> Vec<Ravel> {
+    let mut ravels = Vec::new();
+    let mut query = world.query::<(&MultiverseId, &Ravel)>();
+    for (id, ravel) in query.iter(world) {
+        if *id == multiverse_id {
+            ravels.push(ravel.clone());
+        }
+    }
+    ravels
 }

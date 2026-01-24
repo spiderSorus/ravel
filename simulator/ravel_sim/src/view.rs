@@ -145,8 +145,8 @@ fn update_sector_colors(
     mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&SectorIndex, &Handle<ColorMaterial>)>,
 ) {
-    let chord = &sim.universe.global_chord;
-    let max_val = chord.iter().map(|v| v.abs()).max().unwrap_or(1) as f64;
+    let chord = &sim.multiverse.global_chord;
+    let max_val = chord.iter().map(|v: &i128| v.abs()).max().unwrap_or(1) as f64;
     let max_val = max_val.max(10.0); 
 
     for (sector, mat_handle) in query.iter() {
@@ -233,11 +233,11 @@ fn update_population_stats(
         }
         
         if style.display != Display::None && timer.finished() {
-            let total = sim.universe.entities.len();
+            let total = sim.multiverse.world.iter_entities().count();
             let mut output = format!("Total Population: {}\n", total);
             output.push_str("Cumulative Affinity Scores:\n");
 
-            let chord = &sim.universe.global_chord;
+            let chord = &sim.multiverse.global_chord;
             
             // 4 columns of 16 rows
             let rows = 16;

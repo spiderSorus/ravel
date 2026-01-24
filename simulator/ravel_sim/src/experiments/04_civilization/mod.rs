@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Spawner, RavelType};
+use ravel_ecs::{Spawner, RavelType, Ravel};
 
 pub struct CivilizationPlugin;
 

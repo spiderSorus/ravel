@@ -17,8 +17,8 @@ impl Plugin for ChordsPlugin {
 }
 
 fn setup(mut sim: ResMut<SimulationState>) {
-    sim.universe.entities.clear();
-    sim.universe.global_chord = [0; 64];
+    sim.multiverse.world.clear_entities();
+    sim.multiverse.global_chord = [0; 64];
     sim.step_counter = 0;
     sim.timer = Timer::from_seconds(0.05, TimerMode::Repeating);
 }
@@ -42,10 +42,10 @@ fn tick(
             if land_mask.is_land(lon, lat) {
                 let mut entity = Spawner::spawn(RavelType::Plant, None);
                 entity.pos = ravel_ecs::Pos::new(lon, lat);
-                sim.universe.spawn(entity);
+                sim.multiverse.spawn(entity);
                 spawned += 1;
             }
         }
     }
-    sim.universe.sample_graph();
+    sim.multiverse.sample_graph();
 }

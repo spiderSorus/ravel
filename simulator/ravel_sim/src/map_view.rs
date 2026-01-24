@@ -105,13 +105,16 @@ fn draw_entities_on_map(
         (window.width(), window.width() / image_aspect)
     };
 
-    for entity in &sim.universe.entities {
-        let (x, y) = entity.pos.to_mercator();
+    // Collect all ravels
+    let ravels = sim.multiverse.get_all_ravels();
+
+    for ravel in ravels {
+        let (x, y) = ravel.pos.to_mercator();
 
         let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * draw_width - draw_width / 2.0;
         let screen_y = -((y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * draw_height - draw_height / 2.0);
 
-        let hue = entity.degree;
+        let hue = ravel.degree;
         gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::hsl(hue, 1.0, 0.5));
     }
 }

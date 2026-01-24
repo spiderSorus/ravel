@@ -78,8 +78,9 @@ fn select_entity(
                 (window.width(), window.width() / image_aspect)
             };
 
-            for (idx, entity) in sim.universe.entities.iter().enumerate() {
-                let (x, y) = entity.pos.to_mercator();
+            let ravels = sim.multiverse.get_all_ravels();
+            for (idx, ravel) in ravels.iter().enumerate() {
+                let (x, y) = ravel.pos.to_mercator();
                 
                 let world_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * draw_width - draw_width / 2.0;
                 let world_y = -((y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * draw_height - draw_height / 2.0);
@@ -119,7 +120,7 @@ fn update_visualizer_ui(
     };
 
     // If selected index is invalid (e.g. simulation reset), remove UI
-    if idx >= sim.universe.entities.len() {
+    if idx >= sim.multiverse.world.iter_entities().count() {
         for entity in query.iter() {
             commands.entity(entity).despawn_recursive();
         }
@@ -131,7 +132,12 @@ fn update_visualizer_ui(
         commands.entity(entity).despawn_recursive();
     }
 
-    let entity_data = &sim.universe.entities[idx];
+    // Get the nth ravel from the list
+    let ravels = sim.multiverse.get_all_ravels();
+    let Some(ravel) = ravels.get(idx) else {
+        return;
+    };
+    
     let font = asset_server.load("FiraSans-Bold.ttf");
     let symbol_font = asset_server.load("AppleSymbols.ttf");
 
@@ -174,7 +180,7 @@ fn update_visualizer_ui(
                 let hex = get_hexagram_by_gate(gate);
                 let binary_idx = ravel_ecs::iching::gate_to_binary(gate) as usize;
                 
-                let val = entity_data.chord[binary_idx];
+                let val = ravel.chord[binary_idx];
                 
                 let symbol_color = if val > 0 {
                     let intensity = (val as f32 / i32::MAX as f32).clamp(0.0, 1.0);

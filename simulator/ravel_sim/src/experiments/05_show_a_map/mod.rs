@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_svg::prelude::*;
 
 use crate::experiments::ExperimentState;
 
