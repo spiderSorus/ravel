@@ -29,7 +29,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         
         // Spawn high res noise
         for _ in 0..100 {
-             let plant = Spawner::spawn_plant(32);
+             let plant = Spawner::spawn_plant();
              sim.universe.spawn(plant);
         }
     }

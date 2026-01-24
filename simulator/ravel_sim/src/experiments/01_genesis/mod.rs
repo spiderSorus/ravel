@@ -21,7 +21,7 @@ fn setup(mut sim: ResMut<SimulationState>) {
     
     // Seed
     for _ in 0..50 {
-        sim.universe.spawn(Spawner::spawn_plant(1));
+        sim.universe.spawn(Spawner::spawn_plant());
     }
 }
 
@@ -43,7 +43,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         }
         
         for _ in 0..20 {
-             let plant = Spawner::spawn_plant(sim.current_resolution);
+             let plant = Spawner::spawn_plant();
              sim.universe.spawn(plant);
         }
     }

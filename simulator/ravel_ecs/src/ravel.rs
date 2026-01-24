@@ -32,13 +32,13 @@ impl Pos {
 pub struct Ravel {
     pub base: Taijitu,
     pub locomotion: Locomotion,
-    pub resolution: u8,
+    pub degree: f32,
     pub pos: Pos,
     pub chord: [i32; 64],
 }
 
 impl Ravel {
-    pub fn new(base: Taijitu, locomotion: Locomotion, resolution: u8, pos: Pos, chord: [i32; 64]) -> Self {
-        Self { base, locomotion, resolution, pos, chord }
+    pub fn new(base: Taijitu, locomotion: Locomotion, degree: f32, pos: Pos, chord: [i32; 64]) -> Self {
+        Self { base, locomotion, degree, pos, chord }
     }
 }

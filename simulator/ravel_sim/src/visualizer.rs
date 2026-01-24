@@ -134,18 +134,15 @@ fn update_visualizer_ui(
             // We use RAVE_MANDALA order
             for (i, &gate) in RAVE_MANDALA.iter().enumerate() {
                 let hex = get_hexagram_by_gate(gate);
-                let available = (i as u8) < entity_data.resolution;
+                let binary_idx = ravel_ecs::iching::gate_to_binary(gate) as usize;
                 
-                let val_bool = if available { entity_data.chord[i] > 0 } else { false };
+                let val = entity_data.chord[binary_idx];
+                let val_bool = val > 0;
                 
-                let symbol_color = if available {
-                    if val_bool {
-                        Color::srgb(0.0, 1.0, 0.0) // Green
-                    } else {
-                        Color::srgb(1.0, 0.0, 0.0) // Red
-                    }
+                let symbol_color = if val_bool {
+                    Color::srgb(0.0, 1.0, 0.0) // Green
                 } else {
-                    Color::srgb(0.3, 0.3, 0.3) // Grey
+                    Color::srgb(1.0, 0.0, 0.0) // Red
                 };
 
                 grid.spawn(NodeBundle {

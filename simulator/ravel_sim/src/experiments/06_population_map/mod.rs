@@ -47,7 +47,7 @@ fn tick(
             let lat = rng.gen_range(-60.0..85.0); // Focus on habitable latitudes
 
             if land_mask.is_land(lon, lat) {
-                let mut entity = Spawner::spawn_plant(sim.current_resolution as u8);
+                let mut entity = Spawner::spawn_plant();
                 entity.pos = ravel_ecs::Pos::new(lon, lat);
                 sim.universe.spawn(entity);
                 spawned += 1;

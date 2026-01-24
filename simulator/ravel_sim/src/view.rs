@@ -84,7 +84,7 @@ pub fn setup_mandala(
 
     // Labels
     let label_radius = 330.0;
-    let font = asset_server.load("FiraSans-Bold.ttf");
+    let symbol_font = asset_server.load("AppleSymbols.ttf");
 
     for (i, &gate) in RAVE_MANDALA.iter().enumerate() {
         let angle = ((i as f32 + 0.5) / 64.0) * std::f32::consts::TAU;
@@ -94,11 +94,11 @@ pub fn setup_mandala(
         commands.spawn((
             Text2dBundle {
                 text: Text::from_section(
-                    format!("{}", gate),
+                    get_hexagram_by_gate(gate).character.to_string(),
                     TextStyle {
-                        font: font.clone(),
-                        font_size: 14.0,
-                        color: Color::srgb(0.7, 0.7, 0.7),
+                        font: symbol_font.clone(),
+                        font_size: 24.0,
+                        color: Color::srgb(1.0, 0.0, 0.0),
                     },
                 ),
                 transform: Transform::from_translation(Vec3::new(x, y, 1.0)),
@@ -210,40 +210,8 @@ fn update_population_stats(
         }
         
         if style.display != Display::None && timer.finished() {
-            let mut counts = [0usize; 65];
-            let mut total = 0;
-            
-            for entity in &sim.universe.entities {
-                let res = entity.resolution as usize;
-                if res <= 64 {
-                    counts[res] += 1;
-                    total += 1;
-                }
-            }
-
-            let mut output = format!("Total Population: {}\n", total);
-            
-            // Fixed 4-column layout for consistent display
-            let rows = 16;
-            for r in 0..rows {
-                let r1 = r + 1;
-                let r2 = r + 1 + 16;
-                let r3 = r + 1 + 32;
-                let r4 = r + 1 + 48;
-                
-                let c1 = get_hexagram_by_gate(r1 as u8).character;
-                let c2 = get_hexagram_by_gate(r2 as u8).character;
-                let c3 = get_hexagram_by_gate(r3 as u8).character;
-                let c4 = get_hexagram_by_gate(r4 as u8).character;
-
-                output.push_str(&format!(
-                    "{} {:>2}: {:<5}  {} {:>2}: {:<5}  {} {:>2}: {:<5}  {} {:>2}: {:<5}\n",
-                    c1, r1, counts[r1],
-                    c2, r2, counts[r2],
-                    c3, r3, counts[r3],
-                    c4, r4, counts[r4]
-                ));
-            }
+            let total = sim.universe.entities.len();
+            let output = format!("Total Population: {}\n", total);
             text.sections[0].value = output;
         }
     }

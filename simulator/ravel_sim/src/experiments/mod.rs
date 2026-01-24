@@ -12,6 +12,8 @@ pub mod civilization;
 pub mod show_a_map;
 #[path = "06_population_map/mod.rs"]
 pub mod population_map;
+#[path = "07_chords/mod.rs"]
+pub mod chords;
 
 use genesis::GenesisPlugin;
 use entropy::EntropyPlugin;
@@ -19,6 +21,7 @@ use equilibrium::EquilibriumPlugin;
 use civilization::CivilizationPlugin;
 use show_a_map::ShowAMapExperiment;
 use population_map::PopulationMapPlugin;
+use chords::ChordsPlugin;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum ExperimentState {
@@ -30,6 +33,7 @@ pub enum ExperimentState {
     Civilization,
     ShowAMap,
     PopulationMap,
+    Chords,
 }
 
 pub struct Experiment {
@@ -37,6 +41,7 @@ pub struct Experiment {
     pub name: &'static str,
     pub description: &'static str,
     pub state: ExperimentState,
+    pub active: bool,
 }
 
 pub const EXPERIMENTS: &[Experiment] = &[
@@ -45,36 +50,49 @@ pub const EXPERIMENTS: &[Experiment] = &[
         name: "Genesis",
         description: "The universe springs from a single point.",
         state: ExperimentState::Genesis,
+        active: true,
     },
     Experiment {
         id: 2,
         name: "Entropy",
         description: "All things tend toward chaos.",
         state: ExperimentState::Entropy,
+        active: true,
     },
     Experiment {
         id: 3,
         name: "Equilibrium",
         description: "A state of balance.",
         state: ExperimentState::Equilibrium,
+        active: true,
     },
     Experiment {
         id: 4,
         name: "Civilization",
         description: "Order emerges from chaos.",
         state: ExperimentState::Civilization,
+        active: true,
     },
     Experiment {
         id: 5,
         name: "Show a Map",
         description: "Shows a map.",
         state: ExperimentState::ShowAMap,
+        active: true,
     },
     Experiment {
         id: 6,
         name: "Population Map",
         description: "Spawns a population on the world map.",
         state: ExperimentState::PopulationMap,
+        active: true,
+    },
+    Experiment {
+        id: 7,
+        name: "Chords",
+        description: "Resonant harmonics across the sphere.",
+        state: ExperimentState::Chords,
+        active: true,
     },
 ];
 
@@ -90,6 +108,7 @@ impl Plugin for ExperimentsPlugin {
                 CivilizationPlugin,
                 ShowAMapExperiment,
                 PopulationMapPlugin,
+                ChordsPlugin,
             ));
     }
 }

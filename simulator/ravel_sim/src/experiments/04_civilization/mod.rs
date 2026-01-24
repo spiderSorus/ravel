@@ -24,14 +24,12 @@ fn setup(mut sim: ResMut<SimulationState>) {
 
     // Spawn 20 fully formed (Res 64)
     for _ in 0..20 {
-        sim.universe.spawn(Spawner::spawn_plant(64));
+        sim.universe.spawn(Spawner::spawn_plant());
     }
 
     // Spawn 980 random entities (8 tiers of 8: 8, 16, 24, 32, 40, 48, 56, 64)
     for _ in 0..980 {
-        let tier = rng.gen_range(1..=8);
-        let res = tier * 8;
-        sim.universe.spawn(Spawner::spawn_plant(res));
+        sim.universe.spawn(Spawner::spawn_plant());
     }
     
     sim.universe.sample_graph();
@@ -53,11 +51,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
             for _ in 0..batch_size {
                 if sim.universe.entities.len() >= 1_000_000 { break; }
                 
-                // Random resolution from 8 tiers
-                let tier = rng.gen_range(1..=8);
-                let res = tier * 8;
-                
-                let entity = spawn_balancer(res, &sim.universe.global_chord);
+                let entity = spawn_balancer(&sim.universe.global_chord);
                 sim.universe.spawn(entity);
             }
         }
@@ -71,13 +65,11 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
     }
 }
 
-fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> Ravel {
+fn spawn_balancer(global_chord: &[i32; 64]) -> Ravel {
     let mut rng = rand::thread_rng();
     let mut chord = [0; 64];
 
-    for i in 0..resolution as usize {
-        if i >= 64 { break; }
-        
+    for i in 0..64 {
         // Balancing logic: 
         // If global is positive, we want negative.
         // If global is negative, we want positive.
@@ -95,10 +87,12 @@ fn spawn_balancer(resolution: u8, global_chord: &[i32; 64]) -> Ravel {
         }
     }
 
+    let degree = rng.gen_range(0.0..360.0);
+
     Ravel::new(
         true, // Taijitu::Object
         Locomotion::Active,
-        resolution,
+        degree,
         ravel_ecs::Pos { x: 0.0, y: 0.0 },
         chord
     )

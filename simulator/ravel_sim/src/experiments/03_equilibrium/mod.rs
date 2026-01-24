@@ -20,7 +20,7 @@ fn setup(mut sim: ResMut<SimulationState>) {
 
     // Fill initial state
     for _ in 0..200 {
-        sim.universe.spawn(Spawner::spawn_plant(8));
+        sim.universe.spawn(Spawner::spawn_plant());
     }
 }
 
@@ -33,7 +33,7 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
         
         if current_pop < target_pop {
             for _ in 0..(target_pop - current_pop) {
-                sim.universe.spawn(Spawner::spawn_plant(8));
+                sim.universe.spawn(Spawner::spawn_plant());
             }
         } else if current_pop > target_pop {
             sim.universe.entities.truncate(target_pop);

@@ -165,7 +165,13 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
         
         for (i, &exp_idx) in sorted_indices.iter().enumerate() {
             let exp = &EXPERIMENTS[exp_idx];
-            let hue = if sorted_indices.len() > 1 { i as f32 / (sorted_indices.len() - 1) as f32 * 270.0 } else { 0.0 };
+            
+            let (bg_color, title_color, desc_color) = if exp.active {
+                let hue = if sorted_indices.len() > 1 { i as f32 / (sorted_indices.len() - 1) as f32 * 270.0 } else { 0.0 };
+                (Color::hsl(hue, 1.0, 0.5), Color::WHITE, Color::srgba(1.0, 1.0, 1.0, 0.8))
+            } else {
+                (Color::srgb(0.1, 0.1, 0.1), Color::srgb(0.4, 0.4, 0.4), Color::srgb(0.3, 0.3, 0.3))
+            };
             
             parent.spawn((
                 ButtonBundle {
@@ -177,13 +183,13 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                         flex_direction: FlexDirection::Column,
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::hsl(hue, 1.0, 0.5)),
+                    background_color: BackgroundColor(bg_color),
                     ..default()
                 },
                 ExperimentButton(exp_idx),
             )).with_children(|parent| {
-                parent.spawn(TextBundle::from_section(format!("{}. {}", exp.id, exp.name), TextStyle { font: font.clone(), font_size: 28.0, color: Color::WHITE }));
-                parent.spawn(TextBundle::from_section(exp.description, TextStyle { font: font.clone(), font_size: 16.0, color: Color::srgba(1.0, 1.0, 1.0, 0.8) }));
+                parent.spawn(TextBundle::from_section(format!("{}. {}", exp.id, exp.name), TextStyle { font: font.clone(), font_size: 28.0, color: title_color }));
+                parent.spawn(TextBundle::from_section(exp.description, TextStyle { font: font.clone(), font_size: 16.0, color: desc_color }));
             });
         }
     });
@@ -202,8 +208,10 @@ fn menu_interaction(
 ) {
     for (interaction, button) in interaction_query.iter_mut() {
         if *interaction == Interaction::Pressed {
-            next_app_state.set(AppState::Simulation);
-            next_exp_state.set(EXPERIMENTS[button.0].state);
+            if EXPERIMENTS[button.0].active {
+                next_app_state.set(AppState::Simulation);
+                next_exp_state.set(EXPERIMENTS[button.0].state);
+            }
         }
     }
 }

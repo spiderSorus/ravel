@@ -81,15 +81,24 @@ fn draw_entities_on_map(
     if !visibility.0 { return; }
 
     let window = windows.single();
-    let (width, height) = (window.width(), window.height());
+    let image_width = 2000.0;
+    let image_height = 1478.0;
+    let image_aspect = image_width / image_height;
+    let window_aspect = window.width() / window.height();
+
+    let (draw_width, draw_height) = if window_aspect > image_aspect {
+        (window.height() * image_aspect, window.height())
+    } else {
+        (window.width(), window.width() / image_aspect)
+    };
 
     for entity in &sim.universe.entities {
         let (x, y) = entity.pos.to_mercator();
 
-        let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * width - width / 2.0;
-        let screen_y = (y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * height - height / 2.0;
+        let screen_x = (x + std::f32::consts::PI) / (2.0 * std::f32::consts::PI) * draw_width - draw_width / 2.0;
+        let screen_y = -((y - std::f32::consts::PI) / (2.0 * -std::f32::consts::PI) * draw_height - draw_height / 2.0);
 
-        let hue = (entity.resolution as f32 / 64.0) * 270.0;
+        let hue = entity.degree;
         gizmos.circle_2d(Vec2::new(screen_x, screen_y), 4.0, Color::hsl(hue, 1.0, 0.5));
     }
 }
