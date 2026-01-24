@@ -98,7 +98,7 @@ pub fn setup_mandala(
                     TextStyle {
                         font: font.clone(),
                         font_size: 14.0,
-                        color: Color::rgb(0.7, 0.7, 0.7),
+                        color: Color::srgb(0.7, 0.7, 0.7),
                     },
                 ),
                 transform: Transform::from_translation(Vec3::new(x, y, 1.0)),
@@ -123,7 +123,7 @@ fn draw_mandala_grid(mut gizmos: Gizmos, visibility: Res<MandalaVisibility>) {
 
     let center = Vec2::ZERO;
     let radius = 300.0;
-    let color = Color::rgb(0.2, 0.0, 0.4); 
+    let color = Color::srgb(0.2, 0.0, 0.4); 
 
     for i in 0..64 {
         let angle = (i as f32 / 64.0) * std::f32::consts::TAU;
@@ -152,7 +152,7 @@ fn update_sector_colors(
         } else {
             let norm = (val / max_val).clamp(-1.0, 1.0);
             let t = (norm + 1.0) * 0.5;
-            Color::rgb(t, t, t)
+            Color::srgb(t, t, t)
         };
 
         if let Some(mat) = materials.get_mut(mat_handle) {

@@ -26,12 +26,22 @@ impl Plugin for MapViewPlugin {
 
 fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, windows: Query<&Window>) {
     let window = windows.single();
+    let image_width = 2000.0;
+    let image_height = 1478.0;
+    let image_aspect = image_width / image_height;
+    let window_aspect = window.width() / window.height();
+
+    let size = if window_aspect > image_aspect {
+        Vec2::new(window.height() * image_aspect, window.height())
+    } else {
+        Vec2::new(window.width(), window.width() / image_aspect)
+    };
 
     commands.spawn((
         SpriteBundle {
-            texture: asset_server.load("map.svg"),
+            texture: asset_server.load("map.png"),
             sprite: Sprite {
-                custom_size: Some(Vec2::new(window.width(), window.height())),
+                custom_size: Some(size),
                 ..default()
             },
             ..default()
@@ -51,7 +61,7 @@ fn toggle_map_view(
     mut visibility_res: ResMut<MapViewVisibility>,
     mut query: Query<&mut Visibility, With<MapView>>,
 ) {
-    if keys.just_pressed(KeyCode::KeyM) {
+    if keys.just_pressed(KeyCode::KeyE) {
         visibility_res.0 = !visibility_res.0;
         
         let new_vis = if visibility_res.0 { Visibility::Visible } else { Visibility::Hidden };

@@ -8,6 +8,14 @@ pub mod entropy;
 pub mod equilibrium;
 #[path = "04_civilization/mod.rs"]
 pub mod civilization;
+#[path = "05_show_a_map/mod.rs"]
+pub mod show_a_map;
+
+use genesis::GenesisPlugin;
+use entropy::EntropyPlugin;
+use equilibrium::EquilibriumPlugin;
+use civilization::CivilizationPlugin;
+use show_a_map::ShowAMapExperiment;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum ExperimentState {
@@ -17,39 +25,46 @@ pub enum ExperimentState {
     Entropy,
     Equilibrium,
     Civilization,
+    ShowAMap,
 }
 
-pub struct ExperimentInfo {
+pub struct Experiment {
+    pub id: usize,
     pub name: &'static str,
     pub description: &'static str,
-    pub id: usize,
     pub state: ExperimentState,
 }
 
-pub const EXPERIMENTS: &[ExperimentInfo] = &[
-    ExperimentInfo { 
-        name: "Genesis", 
-        description: "Evolution from simplicity to complexity",
-        id: 1, 
-        state: ExperimentState::Genesis 
+pub const EXPERIMENTS: &[Experiment] = &[
+    Experiment {
+        id: 1,
+        name: "Genesis",
+        description: "The universe springs from a single point.",
+        state: ExperimentState::Genesis,
     },
-    ExperimentInfo { 
-        name: "Entropy", 
-        description: "High energy chaotic fluctuations",
-        id: 2, 
-        state: ExperimentState::Entropy 
+    Experiment {
+        id: 2,
+        name: "Entropy",
+        description: "All things tend toward chaos.",
+        state: ExperimentState::Entropy,
     },
-    ExperimentInfo { 
-        name: "Equilibrium", 
-        description: "Balanced steady state",
-        id: 3, 
-        state: ExperimentState::Equilibrium 
+    Experiment {
+        id: 3,
+        name: "Equilibrium",
+        description: "A state of balance.",
+        state: ExperimentState::Equilibrium,
     },
-    ExperimentInfo { 
-        name: "Civilization", 
-        description: "Growth to 1,000,000 with auto-balancing",
-        id: 4, 
-        state: ExperimentState::Civilization 
+    Experiment {
+        id: 4,
+        name: "Civilization",
+        description: "Order emerges from chaos.",
+        state: ExperimentState::Civilization,
+    },
+    Experiment {
+        id: 5,
+        name: "Show a Map",
+        description: "Shows a map.",
+        state: ExperimentState::ShowAMap,
     },
 ];
 
@@ -58,11 +73,12 @@ pub struct ExperimentsPlugin;
 impl Plugin for ExperimentsPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<ExperimentState>()
-           .add_plugins((
-               genesis::GenesisPlugin,
-               entropy::EntropyPlugin,
-               equilibrium::EquilibriumPlugin,
-               civilization::CivilizationPlugin,
-           ));
+            .add_plugins((
+                GenesisPlugin,
+                EntropyPlugin,
+                EquilibriumPlugin,
+                CivilizationPlugin,
+                ShowAMapExperiment,
+            ));
     }
 }

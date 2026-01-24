@@ -40,10 +40,11 @@ fn main() {
             }),
             ..default()
         }))
-        .insert_resource(ClearColor(Color::rgb(0.05, 0.05, 0.05)))
+        .insert_resource(ClearColor(Color::srgb(0.05, 0.05, 0.05)))
         .init_state::<AppState>()
         .add_plugins(ExperimentsPlugin)
         .add_plugins(MandalaViewPlugin)
+        .add_plugins(bevy_svg::prelude::SvgPlugin)
         
         .add_systems(Startup, (setup_app, setup_keymap_ui))
         .add_systems(OnExit(AppState::Simulation), cleanup_simulation)
@@ -85,7 +86,7 @@ fn cleanup_simulation(mut sim: ResMut<SimulationState>) {
 fn setup_keymap_ui(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font = asset_server.load("FiraSans-Bold.ttf");
     let key_style = TextStyle { font: font.clone(), font_size: 16.0, color: Color::WHITE };
-    let desc_style = TextStyle { font: font.clone(), font_size: 16.0, color: Color::GRAY };
+    let desc_style = TextStyle { font: font.clone(), font_size: 16.0, color: Color::srgb(0.5, 0.5, 0.5) };
 
     commands.spawn((
         NodeBundle {
@@ -141,7 +142,7 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 row_gap: Val::Px(10.0),
                 ..default()
             },
-            background_color: BackgroundColor(Color::rgba(0.0, 0.0, 0.0, 0.8)),
+            background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
             ..default()
         },
         MenuUi,
@@ -168,7 +169,7 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ExperimentButton(exp_idx),
             )).with_children(|parent| {
                 parent.spawn(TextBundle::from_section(format!("{}. {}", exp.id, exp.name), TextStyle { font: font.clone(), font_size: 28.0, color: Color::WHITE }));
-                parent.spawn(TextBundle::from_section(exp.description, TextStyle { font: font.clone(), font_size: 16.0, color: Color::rgba(1.0, 1.0, 1.0, 0.8) }));
+                parent.spawn(TextBundle::from_section(exp.description, TextStyle { font: font.clone(), font_size: 16.0, color: Color::srgba(1.0, 1.0, 1.0, 0.8) }));
             });
         }
     });
@@ -211,6 +212,6 @@ fn quit_simulation(
     mut exit: EventWriter<AppExit>,
 ) {
     if keys.just_pressed(KeyCode::Escape) && *app_state.get() == AppState::Menu {
-        exit.send(AppExit);
+        exit.send(AppExit::Success);
     }
 }
