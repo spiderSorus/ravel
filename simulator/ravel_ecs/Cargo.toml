@@ -5,4 +5,6 @@ edition = "2024"
 
 [dependencies]
 rand = "0.8"
+bevy = "0.14"
+downcast-rs = "1.2"
 serde = { version = "1.0", features = ["derive"] }

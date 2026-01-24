@@ -1,0 +1,39 @@
+# This file documents the core systems and components of the Ravel simulation.
+# It serves as a template for creating mods and custom experiments.
+
+# --- Components ---
+# Components are the fundamental data building blocks for entities.
+
+[[components]]
+name = "Ravel"
+description = "The core component for all entities in the simulation, containing their affinity chord and other essential data."
+
+[[components]]
+name = "Position"
+description = "Stores the geographical coordinates (longitude and latitude) of an entity."
+
+[[components]]
+name = "Locomotion"
+description = "An enum that defines whether an entity's movement is `Passive` or `Active`."
+
+
+# --- Systems and Rules ---
+# Systems define the behaviors and interactions within the simulation. A system
+# can be composed of one or more "rules" that are applied to entities.
+
+[[systems]]
+name = "Global Chord Sampling"
+description = "A fundamental rule that aggregates the affinity chords of all entities into a single `global_chord` for the multiverse. This represents the overall energetic state of the simulation."
+rules = ["SampleGraph"]
+
+[[systems]]
+name = "God System (Example)"
+description = "A conceptual example of a modifier system. This would introduce a 'God' entity and a set of rules that modify the environment or other entities based on the God's properties."
+rules = ["SpawnGod", "DivineIntervention"]
+
+# --- Modifiers (Example) ---
+# Modifiers are special rules that produce significant, often global, changes.
+
+[[modifiers]]
+name = "DivineIntervention"
+description = "A rule where the 'God' entity can alter the `global_chord`, spawn new entities, or remove existing ones, demonstrating a powerful top-down influence on the simulation."

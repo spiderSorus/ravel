@@ -13,8 +13,8 @@ impl Plugin for EntropyPlugin {
 }
 
 fn setup(mut sim: ResMut<SimulationState>) {
-    sim.universe.entities.clear();
-    sim.universe.global_chord = [0; 64];
+    sim.multiverse.world.clear_entities();
+    sim.multiverse.global_chord = [0; 64];
     sim.current_resolution = 32; 
     sim.timer = Timer::from_seconds(0.1, TimerMode::Repeating); 
 }
@@ -23,15 +23,19 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
     sim.timer.tick(time.delta());
     if sim.timer.finished() {
         // Randomly remove some entities
-        if sim.universe.entities.len() > 1000 {
-             sim.universe.entities.truncate(500);
+        if sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count() > 1000 {
+            let mut query = sim.multiverse.world.query_filtered::<Entity, With<Ravel>>();
+            let entities_to_remove: Vec<Entity> = query.iter(&sim.multiverse.world).take(500).collect();
+            for entity in entities_to_remove {
+                sim.multiverse.world.despawn(entity);
+            }
         }
         
         // Spawn high res noise
         for _ in 0..100 {
              let plant = Spawner::spawn(RavelType::Plant, None);
-             sim.universe.spawn(plant);
+             sim.multiverse.spawn(plant);
         }
     }
-    sim.universe.sample_graph();
+    sim.multiverse.sample_graph();
 }

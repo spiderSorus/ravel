@@ -3266,6 +3266,8 @@ checksum = "c3d6831663a5098ea164f89cff59c6284e95f4e3c76ce9848d4529f5ccca9bde"
 name = "ravel_ecs"
 version = "0.1.0"
 dependencies = [
+ "bevy",
+ "downcast-rs",
  "rand",
  "serde",
 ]

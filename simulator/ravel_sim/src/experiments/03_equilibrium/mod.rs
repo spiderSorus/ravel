@@ -13,14 +13,14 @@ impl Plugin for EquilibriumPlugin {
 }
 
 fn setup(mut sim: ResMut<SimulationState>) {
-    sim.universe.entities.clear();
-    sim.universe.global_chord = [0; 64];
+    sim.multiverse.world.clear_entities();
+    sim.multiverse.global_chord = [0; 64];
     sim.current_resolution = 8; 
     sim.timer = Timer::from_seconds(2.0, TimerMode::Repeating); 
 
     // Fill initial state
     for _ in 0..200 {
-        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
+        sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
     }
 }
 
@@ -29,15 +29,19 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
     if sim.timer.finished() {
         // Maintain population count
         let target_pop = 200;
-        let current_pop = sim.universe.entities.len();
+        let current_pop = sim.multiverse.world.query::<&Ravel>().iter(&sim.multiverse.world).count();
         
         if current_pop < target_pop {
             for _ in 0..(target_pop - current_pop) {
-                sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
+                sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
             }
         } else if current_pop > target_pop {
-            sim.universe.entities.truncate(target_pop);
+            let mut query = sim.multiverse.world.query_filtered::<Entity, With<Ravel>>();
+            let entities_to_remove: Vec<Entity> = query.iter(&sim.multiverse.world).take(current_pop - target_pop).collect();
+            for entity in entities_to_remove {
+                sim.multiverse.world.despawn(entity);
+            }
         }
     }
-    sim.universe.sample_graph();
+    sim.multiverse.sample_graph();
 }

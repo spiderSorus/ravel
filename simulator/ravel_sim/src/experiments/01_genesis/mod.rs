@@ -13,15 +13,15 @@ impl Plugin for GenesisPlugin {
 }
 
 fn setup(mut sim: ResMut<SimulationState>) {
-    sim.universe.entities.clear();
-    sim.universe.global_chord = [0; 64];
+    sim.multiverse.world.clear_entities();
+    sim.multiverse.global_chord = [0; 64];
     sim.current_resolution = 1;
     sim.step_counter = 0;
     sim.timer = Timer::from_seconds(1.0, TimerMode::Repeating);
     
     // Seed
     for _ in 0..50 {
-        sim.universe.spawn(Spawner::spawn(RavelType::Plant, None));
+        sim.multiverse.spawn(Spawner::spawn(RavelType::Plant, None));
     }
 }
 
@@ -38,14 +38,14 @@ fn tick(time: Res<Time>, mut sim: ResMut<SimulationState>) {
             if sim.step_counter > 5 {
                 sim.current_resolution = 1;
                 sim.step_counter = 0;
-                sim.universe.entities.clear();
+                sim.multiverse.world.clear_entities();
             }
         }
         
         for _ in 0..20 {
              let plant = Spawner::spawn(RavelType::Plant, None);
-             sim.universe.spawn(plant);
+             sim.multiverse.spawn(plant);
         }
     }
-    sim.universe.sample_graph();
+    sim.multiverse.sample_graph();
 }

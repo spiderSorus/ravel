@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy::app::AppExit;
 use bevy::window::WindowMode;
 use bevy::gizmos::config::{DefaultGizmoConfigGroup, GizmoConfigStore};
-use ravel_ecs::Multiverse;
+use ravel_ecs::{Multiverse, Ravel};
+use std::any::TypeId;
 
 mod resources;
 mod experiments;
@@ -83,7 +84,7 @@ fn setup_app(
 
     commands.spawn(Camera2dBundle::default());
     commands.insert_resource(SimulationState {
-        universe: Multiverse::new(),
+        multiverse: Multiverse::new(vec![TypeId::of::<Ravel>()]),
         timer: Timer::from_seconds(1.0, TimerMode::Repeating),
         current_resolution: 1,
         step_counter: 0,
@@ -96,8 +97,8 @@ fn setup_map_resource(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn cleanup_simulation(mut sim: ResMut<SimulationState>) {
-    sim.universe.entities.clear();
-    sim.universe.global_chord = [0; 64];
+    sim.multiverse.world.clear_entities();
+    sim.multiverse.global_chord = [0; 64];
 }
 
 // --- KEYMAP UI ---

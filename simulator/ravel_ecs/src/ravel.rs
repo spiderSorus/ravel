@@ -1,15 +1,17 @@
+use bevy::prelude::Component;
+
 // --- 1. THE BINARY BASE (Taijitu) ---
 pub type Taijitu = bool;
 
 // --- 2. THE LOCOMOTION LAYER ---
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
 pub enum Locomotion {
     Passive = 0,
     Active = 1,
 }
 
 // --- 3. THE ATOM (Ravel) ---
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Component)]
 pub struct Pos {
     pub x: f32,
     pub y: f32,
@@ -28,7 +30,7 @@ impl Pos {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Component)]
 pub struct Ravel {
     pub base: Taijitu,
     pub locomotion: Locomotion,
