@@ -24,10 +24,16 @@ impl Plugin for MapViewPlugin {
     }
 }
 
-fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, windows: Query<&Window>) {
+    let window = windows.single();
+
     commands.spawn((
         SpriteBundle {
             texture: asset_server.load("map.svg"),
+            sprite: Sprite {
+                custom_size: Some(Vec2::new(window.width(), window.height())),
+                ..default()
+            },
             ..default()
         },
         MapView,
