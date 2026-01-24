@@ -3,6 +3,8 @@ use bevy::prelude::*;
 use crate::AppState;
 use crate::world_view::WorldView;
 
+use crate::experiments::ExperimentState;
+
 pub struct MapViewPlugin;
 
 #[derive(Resource, Default)]
@@ -17,6 +19,14 @@ impl Plugin for MapViewPlugin {
 
         app.add_systems(OnEnter(AppState::Simulation), setup_map)
            .add_systems(OnExit(AppState::Simulation), cleanup_map)
+           .add_systems(OnExit(ExperimentState::Genesis), cleanup_map)
+           .add_systems(OnExit(ExperimentState::Entropy), cleanup_map)
+           .add_systems(OnExit(ExperimentState::Equilibrium), cleanup_map)
+           .add_systems(OnExit(ExperimentState::Civilization), cleanup_map)
+           .add_systems(OnExit(ExperimentState::ShowAMap), cleanup_map)
+           .add_systems(OnExit(ExperimentState::PopulationMap), cleanup_map)
+           .add_systems(OnExit(ExperimentState::Chords), cleanup_map)
+           .add_systems(OnExit(ExperimentState::ViewChanger), cleanup_map)
            .add_systems(Update, (
                toggle_map_view.run_if(in_state(AppState::Simulation)),
                draw_entities_on_map.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MapView>)),

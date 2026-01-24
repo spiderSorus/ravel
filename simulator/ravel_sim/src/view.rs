@@ -5,6 +5,7 @@ use bevy::sprite::{MaterialMesh2dBundle, Mesh2dHandle};
 use ravel_ecs::iching::{gate_to_binary, get_hexagram_by_gate, RAVE_MANDALA};
 use crate::AppState;
 use crate::world_view::WorldView;
+use crate::experiments::ExperimentState;
 
 // To make it reusable, we might define the state generic, but for now we'll import AppState
 // or just export the systems and let main.rs schedule them.
@@ -25,7 +26,17 @@ impl Plugin for MandalaViewPlugin {
         // Simulation Phase
         app.add_systems(OnEnter(AppState::Simulation), setup_mandala)
            .add_systems(OnExit(AppState::Simulation), cleanup_mandala)
-           .add_systems(Update, (               update_global_chord.run_if(in_state(AppState::Simulation)),               draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
+           .add_systems(OnExit(ExperimentState::Genesis), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::Entropy), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::Equilibrium), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::Civilization), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::ShowAMap), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::PopulationMap), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::Chords), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::ViewChanger), cleanup_mandala)
+           .add_systems(Update, (
+               update_global_chord.run_if(in_state(AppState::Simulation)),
+               draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
                update_sector_colors.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
                update_population_stats, 
                toggle_population_ui,

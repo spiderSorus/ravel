@@ -3,6 +3,8 @@ use crate::AppState;
 use crate::world_view::WorldView;
 use ravel_ecs::iching::{get_hexagram_by_gate, RAVE_MANDALA};
 
+use crate::experiments::ExperimentState;
+
 pub struct VisualizerPlugin;
 
 #[derive(Resource, Default)]
@@ -26,7 +28,15 @@ impl Plugin for VisualizerPlugin {
                handle_tooltip.run_if(in_state(AppState::Simulation).and_then(any_with_component::<VisualizerUi>)),
                manage_visualizer_visibility.run_if(in_state(AppState::Simulation)),
            ))
-           .add_systems(OnExit(AppState::Simulation), (cleanup_visualizer, reset_selected_entity));
+           .add_systems(OnExit(AppState::Simulation), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::Genesis), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::Entropy), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::Equilibrium), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::Civilization), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::ShowAMap), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::PopulationMap), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::Chords), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::ViewChanger), (cleanup_visualizer, reset_selected_entity));
     }
 }
 
