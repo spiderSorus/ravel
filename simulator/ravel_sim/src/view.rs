@@ -7,8 +7,8 @@ use crate::AppState;
 use crate::world_view::WorldView;
 use crate::experiments::ExperimentState;
 
-// To make it reusable, we might define the state generic, but for now we'll import AppState
-// or just export the systems and let main.rs schedule them.
+// To make it reusable, we might define the state generic, but for now we
+// just export the systems and let main.rs schedule them.
 // "Make it a view class" -> A Plugin is the closest Bevy equivalent.
 
 pub struct MandalaViewPlugin;
@@ -34,6 +34,9 @@ impl Plugin for MandalaViewPlugin {
            .add_systems(OnExit(ExperimentState::PopulationMap), cleanup_mandala)
            .add_systems(OnExit(ExperimentState::Chords), cleanup_mandala)
            .add_systems(OnExit(ExperimentState::ViewChanger), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::MultiverseA), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::MultiverseB), cleanup_mandala)
+           .add_systems(OnExit(ExperimentState::MultiverseSwitcher), cleanup_mandala)
            .add_systems(Update, (
                update_global_chord.run_if(in_state(AppState::Simulation)),
                draw_mandala_grid.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MandalaElement>)),
@@ -81,8 +84,7 @@ pub fn setup_mandala(
             [v2.x, v2.y, v2.z],
         ]);
 
-        commands.spawn((
-            MaterialMesh2dBundle {
+        commands.spawn(( MaterialMesh2dBundle {
                 mesh: Mesh2dHandle(meshes.add(mesh)),
                 material: materials.add(ColorMaterial::from(Color::BLACK)), 
                 transform: Transform::from_translation(Vec3::new(0.0, 0.0, -1.0)),
@@ -129,9 +131,9 @@ pub fn cleanup_mandala(
     }
 }
 
-fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>) {
+fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>, visibility: Res<MandalaVisibility>) {
     let should_draw = match *world_view.get() {
-        WorldView::Standard | WorldView::MandalaOnly => true,
+        WorldView::Standard | WorldView::MandalaOnly => visibility.0,
         _ => false,
     };
 
@@ -151,16 +153,28 @@ fn draw_mandala_grid(mut gizmos: Gizmos, world_view: Res<State<WorldView>>) {
 
 fn update_global_chord(
     mut multiverse_state: ResMut<ravel_ecs::MultiverseState>,
-    ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
+    query: Query<(&ravel_ecs::MultiverseId, &ravel_ecs::Ravel)>,
 ) {
-    // Calculate aggregate chord from all ravels in the multiverse
-    let mut chord = [0i128; 64];
-    for ravel in ravels.iter() {
-        for (i, val) in ravel.chord.iter().enumerate() {
-            chord[i] = chord[i].saturating_add(*val as i128);
+    let multiverse_id = multiverse_state.config.id;
+    let mut aggregate = [0i128; 64];
+    let mut ravel_count = 0;
+
+    for (id, ravel) in query.iter() {
+        if *id == multiverse_id {
+            ravel_count += 1;
+            for i in 0..64 {
+                aggregate[i] += ravel.chord[i] as i128;
+            }
         }
     }
-    multiverse_state.global_chord = chord;
+
+    if ravel_count > 0 {
+        for i in 0..64 {
+            aggregate[i] /= ravel_count as i128;
+        }
+    }
+
+    multiverse_state.global_chord = aggregate;
 }
 
 fn update_sector_colors(
@@ -169,18 +183,17 @@ fn update_sector_colors(
     query: Query<(&SectorIndex, &Handle<ColorMaterial>)>,
 ) {
     let chord = &multiverse_state.global_chord;
-    let max_val = chord.iter().map(|v: &i128| v.abs()).max().unwrap_or(1) as f64;
-    let max_val = max_val.max(10.0); 
+    let max_possible_avg = i32::MAX as f64; // Max possible average is i32::MAX
 
     for (sector, mat_handle) in query.iter() {
         let gate = RAVE_MANDALA[sector.0];
         let binary_idx = gate_to_binary(gate) as usize;
-        let val = chord[binary_idx] as f64; 
+        let val = chord[binary_idx] as f64;
 
-        let color = if val.abs() < 0.001 {
+        let color = if val.abs() < (max_possible_avg * 0.001) { // Threshold for grey: 0.1% of max_possible_avg
             Color::srgb(0.5, 0.5, 0.5) // Neutral grey
         } else {
-            let norm = (val / max_val).clamp(-1.0, 1.0);
+            let norm = (val / max_possible_avg).clamp(-1.0, 1.0);
             if norm > 0.0 {
                 let t = norm as f32;
                 Color::srgb(0.0, 0.5 + t * 0.5, 0.0) // Green intensity
@@ -258,8 +271,10 @@ fn update_population_stats(
         
         if style.display != Display::None && timer.finished() {
             let total = ravels.iter().count();
-            let mut output = format!("Total Population: {}\n", total);
-            output.push_str("Cumulative Affinity Scores:\n");
+            let mut output = format!("Total Population: {}
+", total);
+            output.push_str("Cumulative Affinity Scores:
+");
 
             let chord = &multiverse_state.global_chord;
             
@@ -274,15 +289,11 @@ fn update_population_stats(
                     let symbol = get_hexagram_by_gate(gate).character;
 
                     // Scientific notation for very large numbers or truncated
-                    let val_str = if val.abs() > 1_000_000_000 {
-                        format!("{:.1e}", val as f64)
-                    } else {
-                        format!("{}", val)
-                    };
+                    let val_str = if val.abs() > 1_000_000_000 { format!("{:.1e}", val as f64) } else { format!("{}", val) };
 
                     output.push_str(&format!("{} {:>2}: {:<10} ", symbol, gate, val_str));
                 }
-                output.push('\n');
+                output.push('\n'); // Add newline after each row
             }
 
             text.sections[0].value = output;

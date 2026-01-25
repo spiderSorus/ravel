@@ -19,8 +19,13 @@ impl Plugin for PopulationMapPlugin {
 fn setup(
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
+    let multiverse_id = MultiverseId(5);
+    multiverse_state.config.id = multiverse_id;
     multiverse_state.reset_chord();
+    active_multiverse.set_active(multiverse_id);
+
     sim.current_resolution = 1;
     sim.step_counter = 0;
     sim.timer = Timer::from_seconds(0.05, TimerMode::Repeating);

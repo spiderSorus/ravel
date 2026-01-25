@@ -16,13 +16,16 @@ fn setup(
     mut commands: Commands,
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
+    let multiverse_id = MultiverseId(3); // Equilibrium multiverse ID
+    multiverse_state.config.id = multiverse_id;
     multiverse_state.reset_chord();
+    active_multiverse.set_active(multiverse_id);
+
     sim.current_resolution = 8;
     sim.timer = Timer::from_seconds(2.0, TimerMode::Repeating);
 
-    let multiverse_id = MultiverseId(3); // Equilibrium multiverse ID
-    
     for _ in 0..200 {
         let plant = Spawner::spawn(RavelType::Plant, None);
         commands.spawn((plant, multiverse_id));

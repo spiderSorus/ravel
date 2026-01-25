@@ -15,8 +15,13 @@ impl Plugin for EntropyPlugin {
 fn setup(
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
+    let multiverse_id = MultiverseId(2);
+    multiverse_state.config.id = multiverse_id;
     multiverse_state.reset_chord();
+    active_multiverse.set_active(multiverse_id);
+
     sim.current_resolution = 32;
     sim.timer = Timer::from_seconds(0.1, TimerMode::Repeating);
 }

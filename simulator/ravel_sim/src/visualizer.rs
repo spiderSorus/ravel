@@ -36,7 +36,10 @@ impl Plugin for VisualizerPlugin {
            .add_systems(OnExit(ExperimentState::ShowAMap), (cleanup_visualizer, reset_selected_entity))
            .add_systems(OnExit(ExperimentState::PopulationMap), (cleanup_visualizer, reset_selected_entity))
            .add_systems(OnExit(ExperimentState::Chords), (cleanup_visualizer, reset_selected_entity))
-           .add_systems(OnExit(ExperimentState::ViewChanger), (cleanup_visualizer, reset_selected_entity));
+           .add_systems(OnExit(ExperimentState::ViewChanger), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::MultiverseA), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::MultiverseB), (cleanup_visualizer, reset_selected_entity))
+           .add_systems(OnExit(ExperimentState::MultiverseSwitcher), (cleanup_visualizer, reset_selected_entity));
     }
 }
 
@@ -63,8 +66,16 @@ fn select_entity(
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut selected: ResMut<SelectedEntity>,
     ravels: Query<&ravel_ecs::Ravel, With<ravel_ecs::MultiverseId>>,
+    ui_interaction: Query<&Interaction, With<Node>>,
 ) {
     if mouse.just_pressed(MouseButton::Left) {
+        // Check if clicking on UI
+        for interaction in ui_interaction.iter() {
+            if *interaction != Interaction::None {
+                return;
+            }
+        }
+
         let window = windows.single();
         if let Some(cursor_pos) = window.cursor_position() {
             let (camera, camera_transform) = camera_q.single();
@@ -157,6 +168,7 @@ fn update_visualizer_ui(
             ..default()
         },
         VisualizerUi,
+        Interaction::default(), // Block clicks
     )).with_children(|parent| {
         parent.spawn(TextBundle::from_section(
             format!("ENTITY #{} - CHORD VISUALIZER", idx),
@@ -182,14 +194,14 @@ fn update_visualizer_ui(
                 
                 let val = ravel.chord[binary_idx];
                 
-                let symbol_color = if val > 0 {
+                let symbol_color = if val >= 0 { // Treat 0 as minimally positive for display
+                    // Adjusted intensity calculation for positive values
                     let intensity = (val as f32 / i32::MAX as f32).clamp(0.0, 1.0);
                     Color::srgb(1.0 - intensity, 1.0, 1.0 - intensity) // Greenish
-                } else if val < 0 {
-                    let intensity = (val.abs() as f32 / i32::MAX as f32).clamp(0.0, 1.0);
+                } else { // val < 0
+                    // Adjusted intensity calculation for negative values
+                    let intensity = ((val as i128).abs() as f32 / i32::MAX as f32).clamp(0.0, 1.0);
                     Color::srgb(1.0, 1.0 - intensity, 1.0 - intensity) // Reddish
-                } else {
-                    Color::srgb(0.5, 0.5, 0.5) // Neutral Grey
                 };
 
                 grid.spawn((

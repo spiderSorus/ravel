@@ -16,14 +16,17 @@ fn setup(
     mut commands: Commands,
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
+    let multiverse_id = MultiverseId(4); // Civilization multiverse ID
+    multiverse_state.config.id = multiverse_id;
     multiverse_state.reset_chord();
+    active_multiverse.set_active(multiverse_id);
+
     sim.current_resolution = 64;
     sim.timer = Timer::from_seconds(0.01, TimerMode::Repeating);
     sim.step_counter = 0;
 
-    let multiverse_id = MultiverseId(4); // Civilization multiverse ID
-    
     for _ in 0..20 {
         let plant = Spawner::spawn(RavelType::Plant, None);
         commands.spawn((plant, multiverse_id));

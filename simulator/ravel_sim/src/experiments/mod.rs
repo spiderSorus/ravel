@@ -16,6 +16,16 @@ pub mod population_map;
 pub mod chords;
 #[path = "08_view_changer/mod.rs"]
 pub mod view_changer;
+#[path = "09_multiverse_a/mod.rs"]
+pub mod multiverse_a;
+#[path = "10_multiverse_b/mod.rs"]
+pub mod multiverse_b;
+#[path = "11_multiverse_switcher/mod.rs"]
+pub mod multiverse_switcher;
+#[path = "12_multiverse_c/mod.rs"]
+pub mod multiverse_c;
+
+pub mod common;
 
 use genesis::GenesisPlugin;
 use entropy::EntropyPlugin;
@@ -25,6 +35,9 @@ use show_a_map::ShowAMapExperiment;
 use population_map::PopulationMapPlugin;
 use chords::ChordsPlugin;
 use view_changer::ViewChangerPlugin;
+use multiverse_a::MultiverseAPlugin;
+use multiverse_b::MultiverseBPlugin;
+use multiverse_switcher::MultiverseSwitcherPlugin;
 
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
 pub enum ExperimentState {
@@ -38,6 +51,9 @@ pub enum ExperimentState {
     PopulationMap,
     Chords,
     ViewChanger,
+    MultiverseA,
+    MultiverseB,
+    MultiverseSwitcher,
 }
 
 pub struct Experiment {
@@ -105,6 +121,27 @@ pub const EXPERIMENTS: &[Experiment] = &[
         state: ExperimentState::ViewChanger,
         active: true,
     },
+    Experiment {
+        id: 9,
+        name: "Multiverse A",
+        description: "First multiverse with plant-based rules.",
+        state: ExperimentState::MultiverseA,
+        active: true,
+    },
+    Experiment {
+        id: 10,
+        name: "Multiverse B",
+        description: "Second multiverse with animal-based rules.",
+        state: ExperimentState::MultiverseB,
+        active: true,
+    },
+    Experiment {
+        id: 11,
+        name: "Multiverse Switcher",
+        description: "Switch between different multiverses.",
+        state: ExperimentState::MultiverseSwitcher,
+        active: true,
+    },
 ];
 
 pub struct ExperimentsPlugin;
@@ -121,6 +158,9 @@ impl Plugin for ExperimentsPlugin {
                 PopulationMapPlugin,
                 ChordsPlugin,
                 ViewChangerPlugin,
+                MultiverseAPlugin,
+                MultiverseBPlugin,
+                MultiverseSwitcherPlugin,
             ));
     }
 }

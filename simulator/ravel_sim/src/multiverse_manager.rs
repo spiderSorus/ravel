@@ -6,13 +6,14 @@ use ravel_ecs::{MultiverseId, MultiverseState, MultiverseLibrary, ActiveMultiver
 pub fn load_multiverse(
     multiverse_id: MultiverseId,
     mut commands: Commands,
-    world: &World,
     library: Res<MultiverseLibrary>,
     mut active: ResMut<ActiveMultiverse>,
+    entity_query: Query<(Entity, &MultiverseId)>,
+    ravel_query: Query<(&MultiverseId, &ravel_ecs::ravel::Ravel)>,
 ) {
     // If there's an active multiverse, unload it first
     if let Some(current_id) = active.id {
-        unload_multiverse(current_id, &mut commands, world);
+        unload_multiverse(current_id, &mut commands, &entity_query);
     }
 
     // Get the config
@@ -21,7 +22,7 @@ pub fn load_multiverse(
         let mut state = MultiverseState::new(config.clone());
         
         // Calculate initial chord (should be empty since we just cleared)
-        state.global_chord = calculate_chord_for_multiverse(world, multiverse_id);
+        state.global_chord = calculate_chord_for_multiverse(multiverse_id, &ravel_query);
         
         // Set as active
         active.set_active(multiverse_id);
@@ -36,28 +37,12 @@ pub fn load_multiverse(
 pub fn unload_multiverse(
     multiverse_id: MultiverseId,
     commands: &mut Commands,
-    world: &World,
+    query: &Query<(Entity, &MultiverseId)>,
 ) {
-    // Query for all entities belonging to this multiverse
-    // SAFETY: We only do immutable queries on the world through the unsafe block
-    let entities_to_despawn: Vec<Entity> = unsafe {
-        let world_mut = std::ptr::addr_of!(world) as *mut bevy::prelude::World;
-        (*world_mut)
-            .query_filtered::<Entity, With<ravel_ecs::MultiverseId>>()
-            .iter(world)
-            .filter(|entity| {
-                if let Some(mv_id) = world.entity(*entity).get::<ravel_ecs::MultiverseId>() {
-                    *mv_id == multiverse_id
-                } else {
-                    false
-                }
-            })
-            .collect()
-    };
-
-    // Despawn all entities
-    for entity in entities_to_despawn {
-        commands.entity(entity).despawn();
+    for (entity, mv_id) in query.iter() {
+        if *mv_id == multiverse_id {
+            commands.entity(entity).despawn();
+        }
     }
 }
 
@@ -77,9 +62,9 @@ pub fn spawn_with_multiverse(
 /// Sample the global chord for the active multiverse
 #[allow(dead_code)]
 pub fn sample_active_multiverse_chord(
-    world: &World,
     mut state: ResMut<MultiverseState>,
+    query: Query<(&MultiverseId, &ravel_ecs::ravel::Ravel)>,
 ) {
     // Calculate aggregate chord from all entities in this multiverse
-    state.global_chord = calculate_chord_for_multiverse(world, state.config.id);
+    state.global_chord = calculate_chord_for_multiverse(state.config.id, &query);
 }

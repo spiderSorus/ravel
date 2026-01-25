@@ -109,35 +109,35 @@ impl MultiverseLibrary {
     }
 }
 
-// --- Helper function to calculate aggregate chord ---
-pub fn calculate_chord_for_multiverse(world: &World, multiverse_id: MultiverseId) -> [i128; 64] {
+// --- Helper function to calculate aggregate chord (calculates average) ---
+pub fn calculate_chord_for_multiverse(multiverse_id: MultiverseId, query: &Query<(&MultiverseId, &Ravel)>) -> [i128; 64] {
     let mut aggregate = [0i128; 64];
-    // SAFETY: We only do immutable queries on the world
-    unsafe {
-        let world_mut = std::ptr::addr_of!(world) as *mut World;
-        let mut query = (*world_mut).query::<(&MultiverseId, &Ravel)>();
-        for (id, ravel) in query.iter(world) {
-            if *id == multiverse_id {
-                for i in 0..64 {
-                    aggregate[i] += ravel.chord[i] as i128;
-                }
+    let mut ravel_count = 0; // Counter for Ravel objects in this multiverse
+    
+    for (id, ravel) in query.iter() {
+        if *id == multiverse_id {
+            ravel_count += 1; // Increment count for each Ravel in the multiverse
+            for i in 0..64 {
+                aggregate[i] += ravel.chord[i] as i128;
             }
+        }
+    }
+
+    // Normalize by dividing by the number of Ravel objects
+    if ravel_count > 0 {
+        for i in 0..64 {
+            aggregate[i] /= ravel_count as i128;
         }
     }
     aggregate
 }
 
 // --- Helper function to get all ravels in a multiverse ---
-pub fn get_ravels_for_multiverse(world: &World, multiverse_id: MultiverseId) -> Vec<Ravel> {
+pub fn get_ravels_for_multiverse(multiverse_id: MultiverseId, query: &Query<(&MultiverseId, &Ravel)>) -> Vec<Ravel> {
     let mut ravels = Vec::new();
-    // SAFETY: We only do immutable queries on the world
-    unsafe {
-        let world_mut = std::ptr::addr_of!(world) as *mut World;
-        let mut query = (*world_mut).query::<(&MultiverseId, &Ravel)>();
-        for (id, ravel) in query.iter(world) {
-            if *id == multiverse_id {
-                ravels.push(ravel.clone());
-            }
+    for (id, ravel) in query.iter() {
+        if *id == multiverse_id {
+            ravels.push(ravel.clone());
         }
     }
     ravels

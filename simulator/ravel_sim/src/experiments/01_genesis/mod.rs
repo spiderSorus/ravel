@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use crate::resources::SimulationState;
 use crate::experiments::ExperimentState;
-use ravel_ecs::{Spawner, RavelType, MultiverseState, MultiverseId};
+use ravel_ecs::{Spawner, RavelType, MultiverseState, MultiverseId, MultiverseConfig};
+use crate::experiments::common::setup_multiverse_experiment;
 
 pub struct GenesisPlugin;
 
@@ -16,14 +17,17 @@ fn setup(
     mut commands: Commands,
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
-    multiverse_state.reset_chord();
-    sim.current_resolution = 1;
-    sim.step_counter = 0;
-    sim.timer = Timer::from_seconds(1.0, TimerMode::Repeating);
+    let config = MultiverseConfig {
+        id: MultiverseId(1),
+        name: "Genesis".to_string(),
+        required_components: vec![],
+    };
+    
+    setup_multiverse_experiment(config, (1, 1.0), &mut sim, &mut multiverse_state, &mut active_multiverse);
     
     let multiverse_id = MultiverseId(1);
-    
     for _ in 0..50 {
         let plant = Spawner::spawn(RavelType::Plant, None);
         commands.spawn((plant, multiverse_id));
@@ -47,7 +51,7 @@ fn tick(
                 sim.current_resolution = 1;
                 sim.step_counter = 0;
                 
-                let multiverse_id = MultiverseId(1);
+                let _multiverse_id = MultiverseId(1);
                 // Despawn entities from Genesis multiverse
                 let entities_to_despawn: Vec<_> = entities_query
                     .iter()

@@ -27,6 +27,9 @@ impl Plugin for MapViewPlugin {
            .add_systems(OnExit(ExperimentState::PopulationMap), cleanup_map)
            .add_systems(OnExit(ExperimentState::Chords), cleanup_map)
            .add_systems(OnExit(ExperimentState::ViewChanger), cleanup_map)
+           .add_systems(OnExit(ExperimentState::MultiverseA), cleanup_map)
+           .add_systems(OnExit(ExperimentState::MultiverseB), cleanup_map)
+           .add_systems(OnExit(ExperimentState::MultiverseSwitcher), cleanup_map)
            .add_systems(Update, (
                toggle_map_view.run_if(in_state(AppState::Simulation)),
                draw_entities_on_map.run_if(in_state(AppState::Simulation).and_then(any_with_component::<MapView>)),
@@ -55,6 +58,7 @@ fn setup_map(mut commands: Commands, asset_server: Res<AssetServer>, windows: Qu
                 custom_size: Some(size),
                 ..default()
             },
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, -2.0)), // Map at lowest layer
             ..default()
         },
         MapView,

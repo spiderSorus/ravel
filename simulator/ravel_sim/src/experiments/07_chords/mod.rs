@@ -19,8 +19,13 @@ impl Plugin for ChordsPlugin {
 fn setup(
     mut sim: ResMut<SimulationState>,
     mut multiverse_state: ResMut<MultiverseState>,
+    mut active_multiverse: ResMut<ravel_ecs::ActiveMultiverse>,
 ) {
+    let multiverse_id = MultiverseId(6);
+    multiverse_state.config.id = multiverse_id;
     multiverse_state.reset_chord();
+    active_multiverse.set_active(multiverse_id);
+
     sim.step_counter = 0;
     sim.timer = Timer::from_seconds(0.05, TimerMode::Repeating);
 }

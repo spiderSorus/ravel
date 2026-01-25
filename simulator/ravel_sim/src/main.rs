@@ -12,6 +12,8 @@ mod map_resources;
 mod visualizer;
 mod world_view;
 mod multiverse_manager;
+mod multiverse_manager_view;
+mod multiverse_info_view;
 
 use resources::SimulationState;
 use experiments::{ExperimentsPlugin, ExperimentState, EXPERIMENTS};
@@ -19,6 +21,8 @@ use view::MandalaViewPlugin;
 use map_view::MapViewPlugin;
 use visualizer::VisualizerPlugin;
 use world_view::{WorldViewPlugin, WorldView};
+use multiverse_manager_view::MultiverseManagerPlugin;
+use multiverse_info_view::MultiverseInfoViewPlugin;
 
 // --- STATES ---
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, Hash, States)]
@@ -59,11 +63,15 @@ fn main() {
         .add_plugins(MandalaViewPlugin)
         .add_plugins(MapViewPlugin)
         .add_plugins(VisualizerPlugin)
+        .add_plugins(MultiverseManagerPlugin)
+        .add_plugins(MultiverseInfoViewPlugin)
         .add_plugins(bevy_svg::prelude::SvgPlugin)
         
         .add_systems(Startup, (setup_app, setup_keymap_ui, setup_map_resource))
         .add_systems(Update, map_resources::generate_land_mask_system.run_if(resource_exists::<map_resources::MapImageHandle>))
-        .add_systems(OnExit(AppState::Simulation), cleanup_simulation)
+        .add_systems(OnExit(AppState::Simulation), (cleanup_multiverse_entities, clear_active_multiverse).chain())
+        .add_systems(OnExit(ExperimentState::MultiverseA), (cleanup_multiverse_entities, clear_active_multiverse).chain())
+        .add_systems(OnExit(ExperimentState::MultiverseB), (cleanup_multiverse_entities, clear_active_multiverse).chain())
         .add_systems(Update, (
             quit_simulation,
             return_to_menu,
@@ -94,7 +102,19 @@ fn setup_map_resource(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(map_resources::MapImageHandle(handle));
 }
 
-fn cleanup_simulation(mut active: ResMut<ActiveMultiverse>) {
+fn cleanup_multiverse_entities(
+    mut commands: Commands,
+    active: Res<ActiveMultiverse>,
+    query: Query<(Entity, &ravel_ecs::MultiverseId)>,
+) {
+    if let Some(multiverse_id) = active.id {
+        multiverse_manager::unload_multiverse(multiverse_id, &mut commands, &query);
+    }
+}
+
+fn clear_active_multiverse(
+    mut active: ResMut<ActiveMultiverse>,
+) {
     active.clear_active();
 }
 
@@ -152,10 +172,13 @@ fn setup_menu(mut commands: Commands, asset_server: Res<AssetServer>) {
             style: Style {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
+                flex_direction: FlexDirection::Row,
+                flex_wrap: FlexWrap::Wrap,
                 align_items: AlignItems::Center,
+                align_content: AlignContent::Center,
                 justify_content: JustifyContent::Center,
                 row_gap: Val::Px(10.0),
+                column_gap: Val::Px(10.0),
                 ..default()
             },
             background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.8)),
@@ -204,7 +227,7 @@ fn cleanup_menu(mut commands: Commands, query: Query<Entity, With<MenuUi>>) {
 }
 
 fn menu_interaction(
-    mut interaction_query: Query<(&Interaction, &ExperimentButton), (Changed<Interaction>, With<Button>)>,
+    mut interaction_query: Query<(&Interaction, &ExperimentButton), (Changed<Interaction>, With<Button>) >,
     mut next_app_state: ResMut<NextState<AppState>>,
     mut next_exp_state: ResMut<NextState<ExperimentState>>,
 ) {
