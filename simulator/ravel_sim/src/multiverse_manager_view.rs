@@ -95,14 +95,14 @@ fn manage_manager_ui(
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::srgb(0.2, 0.4, 0.6)),
+                    background_color: BackgroundColor(Color::hsl(200.0, 0.8, 0.6)),
                     ..default()
                 },
                 MultiverseButton(10),
             )).with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
                     "Load Multiverse A",
-                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::WHITE }
+                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::BLACK }
                 ));
             });
             
@@ -117,14 +117,14 @@ fn manage_manager_ui(
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::srgb(0.6, 0.2, 0.4)),
+                    background_color: BackgroundColor(Color::hsl(230.0, 0.8, 0.6)),
                     ..default()
                 },
                 MultiverseButton(11),
             )).with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
                     "Load Multiverse B",
-                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::WHITE }
+                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::BLACK }
                 ));
             });
 
@@ -139,14 +139,14 @@ fn manage_manager_ui(
                         padding: UiRect::all(Val::Px(10.0)),
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::srgb(0.4, 0.6, 0.2)),
+                    background_color: BackgroundColor(Color::hsl(260.0, 0.8, 0.6)),
                     ..default()
                 },
                 MultiverseButton(12),
             )).with_children(|parent| {
                 parent.spawn(TextBundle::from_section(
                     "Load Multiverse C",
-                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::WHITE }
+                    TextStyle { font: font.clone(), font_size: 14.0, color: Color::BLACK }
                 ));
             });
         });
